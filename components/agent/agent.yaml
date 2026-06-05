@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snapcd-agent
+  labels:
+    app: snapcd-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: snapcd-agent
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: snapcd-agent
+    spec:
+      containers:
+        - name: snapcd-agent
+          image: ghcr.io/schrieksoft/snapcd/snapcd-agent:1.3.0
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: Agent__InstanceName
+              value: "$(POD_NAME)"
+            - name: Agent__ClientSecret
+              valueFrom:
+                secretKeyRef:
+                  name: snapcd-agent-credentials
+                  key: Agent__ClientSecret
+          volumeMounts:
+            - name: config
+              mountPath: /app/appsettings.json
+              subPath: appsettings.json
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+      volumes:
+        - name: config
+          configMap:
+            name: snapcd-agent-config
