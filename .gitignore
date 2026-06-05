@@ -1,0 +1,9 @@
+# Editor / OS junk
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# AI assistant scratch directories
+.claude/
+.cursor/

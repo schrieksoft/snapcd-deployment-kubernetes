@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: snapcd-server
+  labels:
+    app: snapcd-server
+spec:
+  selector:
+    app: snapcd-server
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snapcd-server
+  labels:
+    app: snapcd-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: snapcd-server
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: snapcd-server
+    spec:
+      containers:
+        - name: snapcd-server
+          image: ghcr.io/schrieksoft/snapcd/snapcd-server:1.3.1
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
+            - name: ASPNETCORE_URLS
+              value: "http://0.0.0.0:8080"
+          ports:
+            - containerPort: 8080
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /app/appsettings.json
+              subPath: appsettings.json
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: config
+          secret:
+            secretName: snapcd-server-config

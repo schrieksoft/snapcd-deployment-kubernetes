@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Root kustomization — brings up all three Snap CD components together.
+# Each component lives in its own namespace (snapcd-server, snapcd-runner, snapcd-agent)
+# and is fully self-contained; you can also `kubectl apply -k components/<name>` directly.
+
+resources:
+  - components/server
+  - components/runner
+  - components/agent
