@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: snapcd-agent
-          image: ghcr.io/schrieksoft/snapcd/snapcd-agent:1.4.2
+          image: ghcr.io/schrieksoft/snapcd/snapcd-agent:1.4.3
           env:
             - name: POD_NAME
               valueFrom:
