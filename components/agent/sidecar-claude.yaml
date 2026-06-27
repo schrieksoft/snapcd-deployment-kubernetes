@@ -33,7 +33,7 @@ spec:
     spec:
       containers:
         - name: snapcd-agent-sidecar-claude
-          image: ghcr.io/schrieksoft/snapcd/snapcd-agent-sidecar-claude:1.4.3
+          image: ghcr.io/schrieksoft/snapcd/snapcd-agent-sidecar-claude:1.5.0
           env:
             - name: SNAPCD_SERVER_URL
               value: "http://snapcd-server.snapcd-server.svc.cluster.local:8080"
