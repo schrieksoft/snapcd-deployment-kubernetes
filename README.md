@@ -58,10 +58,10 @@ Each component deploys to its own namespace, so cross-component traffic crosses 
 
 | Caller                          | Target                                                          |
 |---------------------------------|-----------------------------------------------------------------|
-| Runner → Server                 | `http://snapcd-server.snapcd-server.svc.cluster.local:8080`     |
-| Agent (orchestrator) → Server   | `http://snapcd-server.snapcd-server.svc.cluster.local:8080`     |
-| Agent (sidecar) → Server (MCP)  | `http://snapcd-server.snapcd-server.svc.cluster.local:8080`     |
-| Agent (orchestrator) → sidecar  | `http://snapcd-agent-sidecar-claude.snapcd-agent.svc.cluster.local:8080` |
+| Runner → Server                 | `http://snapcd-server.snapcd-server.svc.cluster.local:5000`     |
+| Agent (orchestrator) → Server   | `http://snapcd-server.snapcd-server.svc.cluster.local:5000`     |
+| Agent (sidecar) → Server (MCP)  | `http://snapcd-server.snapcd-server.svc.cluster.local:5000`     |
+| Agent (orchestrator) → sidecar  | `http://snapcd-agent-sidecar-claude.snapcd-agent.svc.cluster.local:7001` |
 | Server → SQL Server             | `sqlserver.snapcd-server.svc.cluster.local:1433`                |
 | Server → Redis                  | `redis.snapcd-server.svc.cluster.local:6379`                    |
 
@@ -78,10 +78,10 @@ kubectl logs -n snapcd-server deployment/snapcd-server -f
 Once the Server reports healthy, port-forward the Dashboard to your workstation:
 
 ```bash
-kubectl port-forward -n snapcd-server svc/snapcd-server 8080:8080
+kubectl port-forward -n snapcd-server svc/snapcd-server 5000:5000
 ```
 
-Visit <http://localhost:8080> and sign in with the pre-seeded credentials:
+Visit <http://localhost:5000> and sign in with the pre-seeded credentials:
 
 - **Email:** `admin@preseeded.io`
 - **Password:** `Admin#123`
@@ -251,7 +251,7 @@ kubectl logs -n snapcd-server deployment/snapcd-server | grep -i "connection\|sq
 # Runner can't reach the Server?
 kubectl logs -n snapcd-runner snapcd-runner-0
 kubectl exec -it -n snapcd-runner snapcd-runner-0 -- /bin/bash
-#   …then: curl -v http://snapcd-server.snapcd-server.svc.cluster.local:8080/healthz
+#   …then: curl -v http://snapcd-server.snapcd-server.svc.cluster.local:5000/healthz
 
 # Agent or sidecar misbehaving?
 kubectl logs -n snapcd-agent deployment/snapcd-agent
