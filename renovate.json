@@ -7,6 +7,10 @@
   "gitAuthor": "snapcd-bot <noreply@snapcd.io>",
   "labels": ["dependencies"],
 
+  "kubernetes": {
+    "managerFilePatterns": ["/^components/.+\\.yaml$/"]
+  },
+
   "packageRules": [
     {
       "matchPackageNames": ["*"],
