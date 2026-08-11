@@ -47,7 +47,7 @@ snapcd-deployment-kubernetes/
 │       └── config/
 │           ├── appsettings.json    # ConfigMap (ClientId only)
 │           ├── agent-secret.env    # Agent__ClientSecret
-│           └── sidecar-claude-secret.env  # ANTHROPIC_API_KEY
+│           └── sidecar-claude-secret.env  # Claude sidecar credentials
 ├── renovate.json                   # Auto-PR new Snap CD image versions
 └── .github/workflows/renovate.yaml
 ```
@@ -191,13 +191,29 @@ Set the client secret in `components/agent/config/agent-secret.env`:
 Agent__ClientSecret=<the-real-secret>
 ```
 
-The Agent ships with a Claude sidecar by default. If you want the sidecar to call Anthropic directly using your own Anthropic API key, fill in `components/agent/config/sidecar-claude-secret.env`:
+The Agent ships with a Claude sidecar by default. It needs exactly one Anthropic credential, set in `components/agent/config/sidecar-claude-secret.env`:
 
 ```
-ANTHROPIC_API_KEY=sk-ant-…
+# A Claude subscription token…
+CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-…
+# …or an Anthropic API key instead. Set one, not both.
+ANTHROPIC_API_KEY=sk-ant-api03-…
+# Optional: a GitHub PAT, used by the sidecar's git/gh for the AutoFix path.
+GITHUB_TOKEN=ghp_…
 ```
 
-If left blank, the sidecar uses BYOK credentials configured on the Agent resource (the sidecar fetches them from the Server at mission time). If you've configured a different inference provider for your organization, swap `components/agent/sidecar-claude.yaml` for the matching sidecar manifest.
+Both keys are optional as far as the manifest is concerned, so the pod reaches `Running` with neither set and only fails when a mission calls for inference. Confirm the credential arrived with:
+
+```bash
+kubectl exec -n snapcd-agent deployment/snapcd-agent-sidecar-claude -- \
+  sh -c 'env | grep -c "ANTHROPIC_API_KEY=.\|CLAUDE_CODE_OAUTH_TOKEN=."'
+```
+
+That file feeds a `secretGenerator`, so `kubectl apply -k .` after editing it is enough to roll the new value out.
+
+The sidecar reaches the Server for MCP via `SNAPCD_BASE_URL` (set in `sidecar-claude.yaml`, `/mcp` is appended). It refuses to start without it, which surfaces as the orchestrator failing to connect on port 7001.
+
+If you've configured a different inference provider for your organization, swap `components/agent/sidecar-claude.yaml` for the matching sidecar manifest.
 
 ## Customization patterns
 

@@ -35,13 +35,30 @@ spec:
         - name: snapcd-agent-sidecar-claude
           image: ghcr.io/schrieksoft/snapcd/snapcd-agent-sidecar-claude:1.12.6
           env:
-            - name: SNAPCD_SERVER_URL
+            # MCP is served at {SNAPCD_BASE_URL}/mcp.
+            - name: SNAPCD_BASE_URL
               value: "http://snapcd-server.snapcd-server.svc.cluster.local:5000"
+            # Claude auth, read from the process environment by the Claude Code CLI.
+            # Exactly one of the two is required; both keys are optional in the Secret.
+            - name: CLAUDE_CODE_OAUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: snapcd-agent-sidecar-claude-credentials
+                  key: CLAUDE_CODE_OAUTH_TOKEN
+                  optional: true
             - name: ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: snapcd-agent-sidecar-claude-credentials
                   key: ANTHROPIC_API_KEY
+                  optional: true
+            # PAT used by the pre-installed git/gh for the AutoFix path (clone + open PR).
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: snapcd-agent-sidecar-claude-credentials
+                  key: GITHUB_TOKEN
+                  optional: true
           ports:
             - containerPort: 7001
               name: http
