@@ -33,7 +33,7 @@ spec:
     spec:
       containers:
         - name: snapcd-server
-          image: ghcr.io/schrieksoft/snapcd/snapcd-server:1.12.7
+          image: ghcr.io/schrieksoft/snapcd/snapcd-server:1.12.8
           env:
             - name: ASPNETCORE_ENVIRONMENT
               value: "Production"
