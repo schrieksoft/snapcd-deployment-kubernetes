@@ -33,7 +33,7 @@ spec:
     spec:
       containers:
         - name: snapcd-agent-sidecar-claude
-          image: ghcr.io/schrieksoft/snapcd/snapcd-agent-sidecar-claude:1.12.12
+          image: ghcr.io/schrieksoft/snapcd/snapcd-agent-sidecar-claude:1.12.13
           env:
             # MCP is served at {SNAPCD_BASE_URL}/mcp.
             - name: SNAPCD_BASE_URL
