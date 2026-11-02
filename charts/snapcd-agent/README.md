@@ -1,6 +1,6 @@
 # snapcd-agent
 
-![AppVersion: 1.15.6](https://img.shields.io/badge/AppVersion-1.15.6-informational?style=flat-square)
+![AppVersion: 1.15.10](https://img.shields.io/badge/AppVersion-1.15.10-informational?style=flat-square)
 
 The Snap CD Agent, with its Claude sidecar for inference.
 
@@ -34,6 +34,9 @@ The defaults are the reference deployment's sample settings, the same as the Doc
 | credentials.clientSecret | string | `"defaultAgent"` | The Agent's client secret, injected as `Agent__ClientSecret`. The default is the reference deployment's public sample secret for the pre-seeded `defaultAgent` service principal. |
 | credentials.existingSecret | string | `""` | Name of an existing Secret holding the client secret. |
 | credentials.existingSecretKey | string | `"Agent__ClientSecret"` | Key of the client secret in `credentials.existingSecret`. |
+| externalSettings.content | object | `{}` | `externalsettings.json` as a map, mounted at `/app/externalsettings.json`. Each entry in `Providers` names a `Loader` (`AzureKeyVault`, `AmazonSecretsManager` or `Literal`), its `Configuration`, and in `Data` the settings it supplies. Settings from this file win over `appsettings.json` and environment variables. |
+| externalSettings.existingSecret | string | `""` | Name of an existing Secret holding `externalsettings.json`. When set, `externalSettings.content` is ignored. |
+| externalSettings.existingSecretKey | string | `"externalsettings.json"` | Key of `externalsettings.json` in `externalSettings.existingSecret`. |
 | extraEnv | list | `[]` | Extra environment variables for the Agent container. |
 | extraEnvFrom | list | `[]` | Extra `envFrom` sources for the Agent container. |
 | extraManifests | list | `[]` | Extra manifests, rendered through `tpl`. |
@@ -50,10 +53,10 @@ The defaults are the reference deployment's sample settings, the same as the Doc
 | nodeSelector | object | `{}` | Node selector, for the Agent and the sidecar. |
 | podAnnotations | object | `{}` | Agent pod annotations. |
 | podLabels | object | `{}` | Agent pod labels. |
-| podSecurityContext | object | `{}` | Agent pod security context. |
+| podSecurityContext | object | `{"fsGroup":1654,"runAsGroup":1654,"runAsNonRoot":true,"runAsUser":1654,"seccompProfile":{"type":"RuntimeDefault"}}` | Agent pod security context. The defaults meet the restricted pod security profile; the images run as UID and GID 1654, and `fsGroup` makes provisioned volumes writable by it. |
 | priorityClassName | string | `""` | Priority class name, for the Agent and the sidecar. |
-| resources | object | `{"limits":{"cpu":"1000m","memory":"1Gi"},"requests":{"cpu":"100m","memory":"256Mi"}}` | Agent container resources. |
-| securityContext | object | `{}` | Agent container security context. |
+| resources | object | `{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"50m","memory":"128Mi"}}` | Agent container resources. The Agent only relays between the Server and its sidecar; inference runs in the sidecar. |
+| securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"readOnlyRootFilesystem":true}` | Agent container security context. The defaults meet the restricted pod security profile. |
 | serviceAccount.annotations | object | `{}` | ServiceAccount annotations. |
 | serviceAccount.automount | bool | `true` | Mount the ServiceAccount token into the pods. |
 | serviceAccount.create | bool | `true` | Create a ServiceAccount for the Agent and the sidecar. |
@@ -72,10 +75,10 @@ The defaults are the reference deployment's sample settings, the same as the Doc
 | sidecar.livenessProbe | object | `{"httpGet":{"path":"/health","port":"http"},"initialDelaySeconds":30,"periodSeconds":30}` | Sidecar liveness probe. |
 | sidecar.podAnnotations | object | `{}` | Sidecar pod annotations. |
 | sidecar.podLabels | object | `{}` | Sidecar pod labels. |
-| sidecar.podSecurityContext | object | `{}` | Sidecar pod security context. |
+| sidecar.podSecurityContext | object | `{"fsGroup":1000,"runAsGroup":1000,"runAsNonRoot":true,"runAsUser":1000,"seccompProfile":{"type":"RuntimeDefault"}}` | Sidecar pod security context. The sidecar image's `app` user is UID and GID 1000, unlike the .NET images' 1654. |
 | sidecar.port | int | `7001` | Port the sidecar serves on. |
 | sidecar.readinessProbe | object | `{"httpGet":{"path":"/health","port":"http"},"periodSeconds":10}` | Sidecar readiness probe. |
-| sidecar.resources | object | `{"limits":{"cpu":"1000m","memory":"1Gi"},"requests":{"cpu":"100m","memory":"256Mi"}}` | Sidecar resources. |
-| sidecar.securityContext | object | `{}` | Sidecar container security context. |
+| sidecar.resources | object | `{"limits":{"cpu":"1000m","memory":"2Gi"},"requests":{"cpu":"100m","memory":"256Mi"}}` | Sidecar resources. The Claude CLI runs in this container during a mission. |
+| sidecar.securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}` | Sidecar container security context. The root filesystem stays writable: the Claude CLI lives in the home directory and writes `~/.claude.json` beside it, so the home directory cannot be replaced with an empty volume. |
 | sidecar.serverUrl | string | `""` | Server URL the sidecar calls for MCP. Defaults to the Agent's `Server.Url`. |
 | tolerations | list | `[]` | Tolerations, for the Agent and the sidecar. |

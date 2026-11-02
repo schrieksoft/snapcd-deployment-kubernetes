@@ -121,6 +121,9 @@ spec:
           ports:
             - name: http
               containerPort: {{ .Values.sidecar.port }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           {{- with .Values.sidecar.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -133,6 +136,9 @@ spec:
           livenessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

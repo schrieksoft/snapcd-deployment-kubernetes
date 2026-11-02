@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/name: snapcd-agent
     app.kubernetes.io/instance: snapcd-agent
     app.kubernetes.io/component: sidecar-claude
-    app.kubernetes.io/version: "1.15.9"
+    app.kubernetes.io/version: "1.15.10"
     app.kubernetes.io/part-of: snapcd
 spec:
   type: ClusterIP
@@ -31,7 +31,7 @@ metadata:
     app.kubernetes.io/name: snapcd-agent
     app.kubernetes.io/instance: snapcd-agent
     app.kubernetes.io/component: agent
-    app.kubernetes.io/version: "1.15.9"
+    app.kubernetes.io/version: "1.15.10"
     app.kubernetes.io/part-of: snapcd
 spec:
   replicas: 1
@@ -48,15 +48,28 @@ spec:
         app.kubernetes.io/name: snapcd-agent
         app.kubernetes.io/instance: snapcd-agent
         app.kubernetes.io/component: agent
-        app.kubernetes.io/version: "1.15.9"
+        app.kubernetes.io/version: "1.15.10"
         app.kubernetes.io/part-of: snapcd
     spec:
       serviceAccountName: default
       automountServiceAccountToken: true
+      securityContext:
+        fsGroup: 1654
+        runAsGroup: 1654
+        runAsNonRoot: true
+        runAsUser: 1654
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: snapcd-agent
-          image: ghcr.io/schrieksoft/snapcd/snapcd-agent:1.15.9
+          image: ghcr.io/schrieksoft/snapcd/snapcd-agent:1.15.10
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
           env:
             - name: POD_NAME
               valueFrom:
@@ -70,17 +83,25 @@ spec:
                   name: snapcd-agent-credentials
                   key: Agent__ClientSecret
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/app
             - name: config
               mountPath: /app/appsettings.json
               subPath: appsettings.json
           resources:
             limits:
-              cpu: 1000m
-              memory: 1Gi
+              cpu: 500m
+              memory: 512Mi
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 50m
+              memory: 128Mi
       volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: home
+          emptyDir: {}
         - name: config
           configMap:
             name: snapcd-agent-config
@@ -97,7 +118,7 @@ metadata:
     app.kubernetes.io/name: snapcd-agent
     app.kubernetes.io/instance: snapcd-agent
     app.kubernetes.io/component: sidecar-claude
-    app.kubernetes.io/version: "1.15.9"
+    app.kubernetes.io/version: "1.15.10"
     app.kubernetes.io/part-of: snapcd
 spec:
   replicas: 1
@@ -114,15 +135,27 @@ spec:
         app.kubernetes.io/name: snapcd-agent
         app.kubernetes.io/instance: snapcd-agent
         app.kubernetes.io/component: sidecar-claude
-        app.kubernetes.io/version: "1.15.9"
+        app.kubernetes.io/version: "1.15.10"
         app.kubernetes.io/part-of: snapcd
     spec:
       serviceAccountName: default
       automountServiceAccountToken: true
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: snapcd-agent-sidecar-claude
-          image: ghcr.io/schrieksoft/snapcd/snapcd-agent-sidecar-claude:1.15.9
+          image: ghcr.io/schrieksoft/snapcd/snapcd-agent-sidecar-claude:1.15.10
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
           env:
             - name: PORT
               value: "7001"
@@ -149,10 +182,13 @@ spec:
           ports:
             - name: http
               containerPort: 7001
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             limits:
               cpu: 1000m
-              memory: 1Gi
+              memory: 2Gi
             requests:
               cpu: 100m
               memory: 256Mi
@@ -167,3 +203,6 @@ spec:
               port: http
             initialDelaySeconds: 30
             periodSeconds: 30
+      volumes:
+        - name: tmp
+          emptyDir: {}

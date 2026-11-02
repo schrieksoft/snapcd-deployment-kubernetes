@@ -1,6 +1,6 @@
 # snapcd-runner
 
-![AppVersion: 1.15.6](https://img.shields.io/badge/AppVersion-1.15.6-informational?style=flat-square)
+![AppVersion: 1.15.10](https://img.shields.io/badge/AppVersion-1.15.10-informational?style=flat-square)
 
 A Snap CD Runner, which executes OpenTofu, Terraform and Pulumi jobs for a Snap CD Server.
 
@@ -43,8 +43,12 @@ Cloud credentials come from `workloadIdentity` (Azure, AWS or GCP), which annota
 | engines.download.image.registry | string | `""` | Download image registry. Empty pulls from Docker Hub. |
 | engines.download.image.repository | string | `"alpine"` | Download image repository. Needs `wget`, `unzip` and `sha256sum`. |
 | engines.download.image.tag | string | `"3.20"` | Download image tag. |
+| engines.download.resources | object | `{"limits":{"cpu":"500m","memory":"256Mi"},"requests":{"cpu":"50m","memory":"64Mi"}}` | Resources of the `download-engines` init container, which downloads and unzips the engine archives. |
 | engines.download.terraformVersion | string | `""` | Terraform version to download. Empty keeps the image's. Snap CD supports Terraform up to 1.5.7. |
 | engines.download.tofuVersion | string | `""` | OpenTofu version to download. Empty keeps the image's. |
+| externalSettings.content | object | `{}` | `externalsettings.json` as a map, mounted at `/app/externalsettings.json`. Each entry in `Providers` names a `Loader` (`AzureKeyVault`, `AmazonSecretsManager` or `Literal`), its `Configuration`, and in `Data` the settings it supplies. Settings from this file win over `appsettings.json` and environment variables. |
+| externalSettings.existingSecret | string | `""` | Name of an existing Secret holding `externalsettings.json`. When set, `externalSettings.content` is ignored. |
+| externalSettings.existingSecretKey | string | `"externalsettings.json"` | Key of `externalsettings.json` in `externalSettings.existingSecret`. |
 | extraContainers | list | `[]` | Extra containers (sidecars). |
 | extraEnv | list | `[]` | Extra environment variables for the Runner container. |
 | extraEnvFrom | list | `[]` | Extra `envFrom` sources for the Runner container. |
@@ -69,13 +73,13 @@ Cloud credentials come from `workloadIdentity` (Azure, AWS or GCP), which annota
 | podAnnotations | object | `{}` | Pod annotations. |
 | podLabels | object | `{}` | Pod labels. |
 | podManagementPolicy | string | `"OrderedReady"` | StatefulSet pod management policy. |
-| podSecurityContext | object | `{}` | Pod security context. |
+| podSecurityContext | object | `{"fsGroup":1654,"fsGroupChangePolicy":"OnRootMismatch","runAsGroup":1654,"runAsNonRoot":true,"runAsUser":1654,"seccompProfile":{"type":"RuntimeDefault"}}` | Pod security context. The defaults meet the restricted pod security profile; the images run as UID and GID 1654, and `fsGroup` makes provisioned volumes writable by it. |
 | preapprovedHooks.existingConfigMap | string | `""` | Name of an existing ConfigMap holding the pre-approved hook scripts. |
 | preapprovedHooks.hooks | object | the reference deployment's `sample.sh` | Pre-approved hook scripts, file name to content, mounted at `HooksPreapproval.PreapprovedHooksDirectory`. |
 | priorityClassName | string | `""` | Priority class name. |
 | replicaCount | int | `1` | Runner pods. More than one needs `allow_multiple_instances` on the Runner record; each pod connects under its own pod name. |
-| resources | object | `{"limits":{"cpu":"1000m","memory":"1Gi"},"requests":{"cpu":"100m","memory":"256Mi"}}` | Container resources. |
-| securityContext | object | `{}` | Container security context, applied to the Runner and the SSH staging init container. |
+| resources | object | `{"limits":{"cpu":"2000m","memory":"4Gi"},"requests":{"cpu":"250m","memory":"512Mi"}}` | Container resources. A job runs OpenTofu or Terraform and its provider plugins inside this container, so the limit is sized for jobs rather than for the idle Runner (about 40 Mi); a provider alone can use several hundred MB. Raise it for large plans or many concurrent jobs. |
+| securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"readOnlyRootFilesystem":true}` | Container security context. The defaults meet the restricted pod security profile. |
 | serviceAccount.annotations | object | `{}` | ServiceAccount annotations. |
 | serviceAccount.automount | bool | `true` | Mount the ServiceAccount token into the pod. |
 | serviceAccount.create | bool | `true` | Create a ServiceAccount for the Runner. |
@@ -86,6 +90,7 @@ Cloud credentials come from `workloadIdentity` (Azure, AWS or GCP), which annota
 | ssh.existingSecretKey | string | `"id_rsa"` | Key of the private key in `ssh.existingSecret`. |
 | ssh.knownHosts | string | GitHub and GitLab host keys | `known_hosts` content. The default covers GitHub and GitLab. |
 | ssh.privateKey | string | `""` | Private key for cloning private Git repositories. Staged into the pod at 0600 for `git` over SSH. |
+| ssh.resources | object | `{"limits":{"cpu":"100m","memory":"64Mi"},"requests":{"cpu":"10m","memory":"16Mi"}}` | Resources of the `stage-ssh` init container, which only copies two files. |
 | tolerations | list | `[]` | Tolerations. |
 | topologySpreadConstraints | list | `[]` | Topology spread constraints. |
 | updateStrategy | object | `{}` | StatefulSet update strategy. |

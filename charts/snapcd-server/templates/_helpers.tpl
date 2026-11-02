@@ -143,3 +143,11 @@ app.kubernetes.io/managed-by: {{ .ctx.Release.Service }}
 
 {{- toPrettyJson $cfg }}
 {{- end }}
+
+{{- define "snapcd-server.externalSettingsSecretName" -}}
+{{- default (printf "%s-externalsettings" (include "snapcd-server.fullname" .)) .Values.externalSettings.existingSecret }}
+{{- end }}
+
+{{- define "snapcd-server.hasExternalSettings" -}}
+{{- if or .Values.externalSettings.content .Values.externalSettings.existingSecret }}true{{ end }}
+{{- end }}

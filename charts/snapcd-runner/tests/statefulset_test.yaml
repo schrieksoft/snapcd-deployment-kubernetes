@@ -133,3 +133,17 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: 'engines.download.enabled needs'
+
+  - it: gives the init containers their own resources
+    set:
+      ssh.privateKey: key
+      engines.download:
+        enabled: true
+        tofuVersion: 1.8.8
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].resources.limits.memory
+          value: 256Mi
+      - equal:
+          path: spec.template.spec.initContainers[1].resources.limits.memory
+          value: 64Mi

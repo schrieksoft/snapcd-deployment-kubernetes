@@ -45,13 +45,15 @@ tests:
     asserts:
       - notExists:
           path: spec.template.metadata.annotations["checksum/config"]
-      - equal:
-          path: spec.template.spec.volumes[0].secret
-          value:
-            secretName: mine
-            items:
-              - key: settings.json
-                path: appsettings.json
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: config
+            secret:
+              secretName: mine
+              items:
+                - key: settings.json
+                  path: appsettings.json
 
   - it: injects connection strings from existing Secrets as environment variables
     set:
@@ -97,6 +99,12 @@ tests:
       - equal:
           path: spec.template.spec.serviceAccountName
           value: snapcd-server
+
+  - it: gives a slow start time before liveness applies
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.failureThreshold
+          value: 60
 
   - it: never exposes a replica count
     asserts:

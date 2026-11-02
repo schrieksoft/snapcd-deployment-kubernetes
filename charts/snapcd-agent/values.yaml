@@ -29,6 +29,10 @@ config:
   # -- The Agent's `appsettings.json` as a map, rendered into a ConfigMap. It holds no secrets: the client secret comes from `credentials`. The chart fills `Agent.Sidecars` with the Claude sidecar when that key is absent. The defaults are the reference deployment's sample settings, the same as `components/agent/config/appsettings.json` and the Docker deployment, and connect to a Server installed as `snapcd-server` in the `snapcd-server` namespace. See the Snap CD agent settings reference for every key.
   # @default -- the reference deployment's sample settings
   appsettings:
+    Logging:
+      LogLevel:
+        Default: Warning
+        SnapCd: Information
     Server:
       Url: http://snapcd-server.snapcd-server.svc.cluster.local:5000
     Agent:
@@ -59,19 +63,30 @@ serviceAccount:
 podAnnotations: {}
 # -- Agent pod labels.
 podLabels: {}
-# -- Agent pod security context.
-podSecurityContext: {}
-# -- Agent container security context.
-securityContext: {}
+# -- Agent pod security context. The defaults meet the restricted pod security profile; the images run as UID and GID 1654, and `fsGroup` makes provisioned volumes writable by it.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1654
+  runAsGroup: 1654
+  fsGroup: 1654
+  seccompProfile:
+    type: RuntimeDefault
+# -- Agent container security context. The defaults meet the restricted pod security profile.
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
 
-# -- Agent container resources.
+# -- Agent container resources. The Agent only relays between the Server and its sidecar; inference runs in the sidecar.
 resources:
   requests:
-    memory: 256Mi
-    cpu: 100m
+    memory: 128Mi
+    cpu: 50m
   limits:
-    memory: 1Gi
-    cpu: 1000m
+    memory: 512Mi
+    cpu: 500m
 
 # -- Node selector, for the Agent and the sidecar.
 nodeSelector: {}
@@ -122,17 +137,27 @@ sidecar:
   podAnnotations: {}
   # -- Sidecar pod labels.
   podLabels: {}
-  # -- Sidecar pod security context.
-  podSecurityContext: {}
-  # -- Sidecar container security context.
-  securityContext: {}
-  # -- Sidecar resources.
+  # -- Sidecar pod security context. The sidecar image's `app` user is UID and GID 1000, unlike the .NET images' 1654.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  # -- Sidecar container security context. The root filesystem stays writable: the Claude CLI lives in the home directory and writes `~/.claude.json` beside it, so the home directory cannot be replaced with an empty volume.
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  # -- Sidecar resources. The Claude CLI runs in this container during a mission.
   resources:
     requests:
       memory: 256Mi
       cpu: 100m
     limits:
-      memory: 1Gi
+      memory: 2Gi
       cpu: 1000m
   # -- Sidecar readiness probe.
   readinessProbe:
@@ -149,6 +174,15 @@ sidecar:
     periodSeconds: 30
   # -- Extra environment variables for the sidecar.
   extraEnv: []
+
+externalSettings:
+  # -- `externalsettings.json` as a map, mounted at `/app/externalsettings.json`. Each entry in `Providers` names a `Loader` (`AzureKeyVault`, `AmazonSecretsManager` or `Literal`), its `Configuration`, and in `Data` the settings it supplies. Settings from this file win over `appsettings.json` and environment variables.
+  # @default -- `{}`
+  content: {}
+  # -- Name of an existing Secret holding `externalsettings.json`. When set, `externalSettings.content` is ignored.
+  existingSecret: ""
+  # -- Key of `externalsettings.json` in `externalSettings.existingSecret`.
+  existingSecretKey: externalsettings.json
 
 # -- Extra manifests, rendered through `tpl`.
 extraManifests: []

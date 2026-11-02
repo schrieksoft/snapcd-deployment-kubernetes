@@ -1,6 +1,6 @@
 # snapcd-server
 
-![AppVersion: 1.15.6](https://img.shields.io/badge/AppVersion-1.15.6-informational?style=flat-square)
+![AppVersion: 1.15.10](https://img.shields.io/badge/AppVersion-1.15.10-informational?style=flat-square)
 
 The Snap CD Server, with optional bundled SQL Server and Redis.
 
@@ -40,6 +40,9 @@ The bundled SQL Server and Redis are for trials. For anything else, turn them of
 | database.connectionString | string | `""` | Connection string to an external SQL Server database, merged into `appsettings.json` as `ConnectionString` and the SQL Server transport connection string. |
 | database.existingSecret | string | `""` | Name of an existing Secret holding the connection string. Injected as environment variables, so it works with `config.existingSecret` too. |
 | database.existingSecretKey | string | `"connection-string"` | Key of the connection string in `database.existingSecret`. |
+| externalSettings.content | object | `{}` | `externalsettings.json` as a map, mounted at `/app/externalsettings.json`. Each entry in `Providers` names a `Loader` (`AzureKeyVault`, `AmazonSecretsManager` or `Literal`), its `Configuration`, and in `Data` the settings it supplies. Settings from this file win over `appsettings.json` and environment variables. |
+| externalSettings.existingSecret | string | `""` | Name of an existing Secret holding `externalsettings.json`. When set, `externalSettings.content` is ignored. |
+| externalSettings.existingSecretKey | string | `"externalsettings.json"` | Key of `externalsettings.json` in `externalSettings.existingSecret`. |
 | extraContainers | list | `[]` | Extra containers (sidecars) for the Server pod. |
 | extraEnv | list | `[]` | Extra environment variables for the Server container. |
 | extraEnvFrom | list | `[]` | Extra `envFrom` sources for the Server container. |
@@ -76,7 +79,7 @@ The bundled SQL Server and Redis are for trials. For anything else, turn them of
 | podDisruptionBudget.maxUnavailable | int | `1` | Maximum unavailable pods. |
 | podDisruptionBudget.minAvailable | string | `""` | Minimum available pods. |
 | podLabels | object | `{}` | Pod labels, for example `azure.workload.identity/use: "true"`. |
-| podSecurityContext | object | `{}` | Pod security context. |
+| podSecurityContext | object | `{"fsGroup":1654,"runAsGroup":1654,"runAsNonRoot":true,"runAsUser":1654,"seccompProfile":{"type":"RuntimeDefault"}}` | Pod security context. The defaults meet the restricted pod security profile; the images run as UID and GID 1654, and `fsGroup` makes provisioned volumes writable by it. |
 | priorityClassName | string | `""` | Priority class name. |
 | readinessProbe | object | `{"failureThreshold":6,"httpGet":{"path":"/health","port":"http"},"initialDelaySeconds":30,"periodSeconds":10}` | Readiness probe. |
 | redis.affinity | object | `{}` | Redis affinity. |
@@ -90,12 +93,12 @@ The bundled SQL Server and Redis are for trials. For anything else, turn them of
 | redis.nodeSelector | object | `{}` | Redis node selector. |
 | redis.podAnnotations | object | `{}` | Redis pod annotations. |
 | redis.podLabels | object | `{}` | Redis pod labels. |
-| redis.podSecurityContext | object | `{}` | Redis pod security context. |
+| redis.podSecurityContext | object | `{"fsGroup":1000,"runAsGroup":1000,"runAsNonRoot":true,"runAsUser":999,"seccompProfile":{"type":"RuntimeDefault"}}` | Redis pod security context. The image's `redis` user is UID 999, GID 1000. |
 | redis.resources | object | `{"limits":{"cpu":"500m","memory":"256Mi"},"requests":{"cpu":"50m","memory":"64Mi"}}` | Redis resources. |
-| redis.securityContext | object | `{}` | Redis container security context. |
+| redis.securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"readOnlyRootFilesystem":true}` | Redis container security context. |
 | redis.tolerations | list | `[]` | Redis tolerations. |
 | resources | object | `{"limits":{"cpu":"2000m","memory":"2Gi"},"requests":{"cpu":"250m","memory":"512Mi"}}` | Container resources. |
-| securityContext | object | `{}` | Container security context. |
+| securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"readOnlyRootFilesystem":true}` | Container security context. The defaults meet the restricted pod security profile. |
 | service.annotations | object | `{}` | Service annotations. |
 | service.port | int | `5000` | Service port. |
 | service.type | string | `"ClusterIP"` | Service type. |
@@ -122,10 +125,11 @@ The bundled SQL Server and Redis are for trials. For anything else, turn them of
 | sqlserver.persistence.storageClass | string | `""` | Storage class. Empty uses the cluster default. |
 | sqlserver.podAnnotations | object | `{}` | SQL Server pod annotations. |
 | sqlserver.podLabels | object | `{}` | SQL Server pod labels. |
-| sqlserver.podSecurityContext | object | `{}` | SQL Server pod security context. |
+| sqlserver.podSecurityContext | object | `{"fsGroup":10001,"fsGroupChangePolicy":"OnRootMismatch","runAsGroup":10001,"runAsNonRoot":true,"runAsUser":10001,"seccompProfile":{"type":"RuntimeDefault"}}` | SQL Server pod security context. The image runs as `mssql`, UID and GID 10001. |
 | sqlserver.resources | object | `{"limits":{"cpu":"2000m","memory":"4Gi"},"requests":{"cpu":"500m","memory":"2Gi"}}` | SQL Server resources. |
-| sqlserver.securityContext | object | `{}` | SQL Server container security context. |
+| sqlserver.securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"add":["NET_BIND_SERVICE"],"drop":["ALL"]},"readOnlyRootFilesystem":true}` | SQL Server container security context. `NET_BIND_SERVICE` is the one capability the restricted profile permits adding, and the `sqlservr` binary will not start without it, since it carries that file capability. |
 | sqlserver.tolerations | list | `[]` | SQL Server tolerations. |
+| startupProbe | object | `{"failureThreshold":60,"httpGet":{"path":"/health","port":"http"},"periodSeconds":10}` | Startup probe. Liveness and readiness wait for it to pass, so a slow start is not killed: after a restart against a running database, the Server's message bus can take minutes to start. |
 | strategy | object | `{"type":"Recreate"}` | Deployment strategy. `Recreate`, because the Server runs as a single replica. |
 | tolerations | list | `[]` | Tolerations. |
 | topologySpreadConstraints | list | `[]` | Topology spread constraints. |

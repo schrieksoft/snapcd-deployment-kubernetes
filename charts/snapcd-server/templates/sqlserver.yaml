@@ -95,6 +95,8 @@ spec:
           volumeMounts:
             - name: mssqldata
               mountPath: /var/opt/mssql
+            - name: tmp
+              mountPath: /tmp
           {{- with .Values.sqlserver.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -109,6 +111,9 @@ spec:
               port: tds
             initialDelaySeconds: 60
             periodSeconds: 30
+      volumes:
+        - name: tmp
+          emptyDir: {}
       {{- with .Values.sqlserver.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

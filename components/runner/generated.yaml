@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/name: snapcd-runner
     app.kubernetes.io/instance: snapcd-runner
     app.kubernetes.io/component: runner
-    app.kubernetes.io/version: "1.15.9"
+    app.kubernetes.io/version: "1.15.10"
     app.kubernetes.io/part-of: snapcd
 spec:
   clusterIP: None
@@ -31,7 +31,7 @@ metadata:
     app.kubernetes.io/name: snapcd-runner
     app.kubernetes.io/instance: snapcd-runner
     app.kubernetes.io/component: runner
-    app.kubernetes.io/version: "1.15.9"
+    app.kubernetes.io/version: "1.15.10"
     app.kubernetes.io/part-of: snapcd
 spec:
   serviceName: snapcd-runner
@@ -48,15 +48,36 @@ spec:
         app.kubernetes.io/name: snapcd-runner
         app.kubernetes.io/instance: snapcd-runner
         app.kubernetes.io/component: runner
-        app.kubernetes.io/version: "1.15.9"
+        app.kubernetes.io/version: "1.15.10"
         app.kubernetes.io/part-of: snapcd
     spec:
       serviceAccountName: default
       automountServiceAccountToken: true
+      securityContext:
+        fsGroup: 1654
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 1654
+        runAsNonRoot: true
+        runAsUser: 1654
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
         - name: stage-ssh
-          image: ghcr.io/schrieksoft/snapcd/snapcd-runner-azure:1.15.9
+          image: ghcr.io/schrieksoft/snapcd/snapcd-runner-azure:1.15.10
           imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
           command:
             - /bin/sh
             - -c
@@ -83,8 +104,14 @@ spec:
               readOnly: true
       containers:
         - name: snapcd-runner
-          image: ghcr.io/schrieksoft/snapcd/snapcd-runner-azure:1.15.9
+          image: ghcr.io/schrieksoft/snapcd/snapcd-runner-azure:1.15.10
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
           env:
             - name: ASPNETCORE_URLS
               value: "http://0.0.0.0:5001"
@@ -105,6 +132,10 @@ spec:
             - name: http
               containerPort: 5001
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/app
             - name: config
               mountPath: /app/appsettings.json
               subPath: appsettings.json
@@ -118,12 +149,16 @@ spec:
               readOnly: true
           resources:
             limits:
-              cpu: 1000m
-              memory: 1Gi
+              cpu: 2000m
+              memory: 4Gi
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 250m
+              memory: 512Mi
       volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: home
+          emptyDir: {}
         - name: config
           configMap:
             name: snapcd-runner-config
@@ -136,6 +171,7 @@ spec:
         - name: ssh-key
           secret:
             secretName: snapcd-runner-ssh-key
+            defaultMode: 0440
             items:
               - key: id_rsa
                 path: id_rsa

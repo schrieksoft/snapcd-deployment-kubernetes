@@ -4,6 +4,8 @@
 # Usage:
 #   scripts/kind-up.sh               # the snapcd chart, in the snapcd namespace
 #   scripts/kind-up.sh --kustomize   # the Kustomize deployment, in its three namespaces
+#   scripts/kind-up.sh --local       # either of the above with images built locally and tagged :local
+#   scripts/kind-up.sh --restricted  # enforce the restricted pod security profile on the Snap CD namespaces
 #
 # Environment:
 #   KIND_CLUSTER     cluster name (default: snapcd)
@@ -22,9 +24,23 @@ INGRESS_NGINX_VERSION="controller-v1.11.3"
 URL="http://snapcd.localhost:${HTTP_PORT}"
 
 MODE="chart"
-if [[ ${1:-} == "--kustomize" ]]; then
-    MODE="kustomize"
-fi
+LOCAL=false
+RESTRICTED=false
+for arg in "$@"; do
+    case "$arg" in
+        --kustomize) MODE="kustomize" ;;
+        --local) LOCAL=true ;;
+        --restricted) RESTRICTED=true ;;
+        *) echo "unknown argument: $arg" >&2; exit 1 ;;
+    esac
+done
+
+LOCAL_IMAGES=(
+    ghcr.io/schrieksoft/snapcd/snapcd-server:local
+    ghcr.io/schrieksoft/snapcd/snapcd-runner-azure:local
+    ghcr.io/schrieksoft/snapcd/snapcd-agent:local
+    ghcr.io/schrieksoft/snapcd/snapcd-agent-sidecar-claude:local
+)
 
 for tool in kind kubectl helm; do
     command -v "$tool" >/dev/null || { echo "$tool is required" >&2; exit 1; }
@@ -62,6 +78,23 @@ if [[ "$MODE" == "chart" ]] && "${KUBECTL[@]}" get namespace snapcd-server >/dev
     exit 1
 fi
 
+if [[ "$LOCAL" == true ]]; then
+    echo "Loading the :local images"
+    for image in "${LOCAL_IMAGES[@]}"; do
+        docker image inspect "$image" >/dev/null 2>&1 || { echo "$image is not built" >&2; exit 1; }
+        kind load docker-image "$image" --name "$CLUSTER" >/dev/null
+    done
+fi
+
+if [[ "$RESTRICTED" == true ]]; then
+    if [[ "$MODE" == "chart" ]]; then NAMESPACES=(snapcd); else NAMESPACES=(snapcd-server snapcd-runner snapcd-agent); fi
+    for ns in "${NAMESPACES[@]}"; do
+        "${KUBECTL[@]}" create namespace "$ns" --dry-run=client -o yaml | "${KUBECTL[@]}" apply -f - >/dev/null
+        "${KUBECTL[@]}" label namespace "$ns" pod-security.kubernetes.io/enforce=restricted --overwrite >/dev/null
+    done
+    echo "Enforcing the restricted pod security profile on: ${NAMESPACES[*]}"
+fi
+
 echo "Installing ingress-nginx"
 "${KUBECTL[@]}" apply -f "https://raw.githubusercontent.com/kubernetes/ingress-nginx/${INGRESS_NGINX_VERSION}/deploy/static/provider/kind/deploy.yaml" >/dev/null
 "${KUBECTL[@]}" -n ingress-nginx rollout status deployment/ingress-nginx-controller --timeout=300s
@@ -80,9 +113,15 @@ if [[ "$MODE" == "chart" ]]; then
 
     echo "Installing Snap CD"
     helm dependency update charts/snapcd >/dev/null
+    LOCAL_VALUES=()
+    if [[ "$LOCAL" == true ]]; then
+        LOCAL_VALUES=(--values kind/values-local.yaml)
+    fi
+
     "${HELM[@]}" upgrade --install snapcd charts/snapcd \
         --namespace snapcd --create-namespace \
         --values kind/values.yaml \
+        "${LOCAL_VALUES[@]}" \
         --set-string "server.ingress.publicPort=${HTTP_PORT}" \
         "${AGENT[@]}" \
         --wait --timeout 10m
@@ -90,6 +129,11 @@ else
     echo "Applying the Kustomize deployment"
     "${KUBECTL[@]}" kustomize kind/kustomize \
         | sed "s|http://snapcd.localhost:9080|${URL}|" \
+        | if [[ "$LOCAL" == true ]]; then
+              sed -E 's|(image: ghcr\.io/schrieksoft/snapcd/snapcd-[a-z-]+):[^ ]+|\1:local|'
+          else
+              cat
+          fi \
         | "${KUBECTL[@]}" apply -f - >/dev/null
     "${KUBECTL[@]}" -n snapcd-server rollout status statefulset/sqlserver --timeout=300s
     "${KUBECTL[@]}" -n snapcd-server rollout status deployment/snapcd-server --timeout=600s

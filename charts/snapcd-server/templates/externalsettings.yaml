@@ -1,0 +1,12 @@
+{{- if and .Values.externalSettings.content (not .Values.externalSettings.existingSecret) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "snapcd-server.externalSettingsSecretName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "snapcd-server.labels" (dict "ctx" $ "component" "server") | nindent 4 }}
+type: Opaque
+data:
+  externalsettings.json: {{ toPrettyJson .Values.externalSettings.content | b64enc }}
+{{- end }}

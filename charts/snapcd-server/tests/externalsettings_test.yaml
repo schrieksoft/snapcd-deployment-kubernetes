@@ -1,0 +1,73 @@
+suite: externalsettings
+templates:
+  - deployment.yaml
+  - externalsettings.yaml
+release:
+  name: snapcd-server
+  namespace: snapcd-server
+set:
+  config.appsettings.Server.Host: http://localhost:5000
+tests:
+  - it: mounts nothing without externalSettings
+    template: deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: snapcd-server
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: externalsettings
+          any: true
+
+  - it: renders the content into a Secret and mounts it at /app/externalsettings.json
+    set:
+      externalSettings.content:
+        Providers:
+          - Loader: Literal
+            Configuration: {}
+            Data:
+              Some:
+                Setting: value
+    asserts:
+      - template: externalsettings.yaml
+        isKind:
+          of: Secret
+      - template: externalsettings.yaml
+        matchRegex:
+          path: data["externalsettings.json"]
+          pattern: '"Loader": "Literal"'
+          decodeBase64: true
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: externalsettings
+            mountPath: /app/externalsettings.json
+            subPath: externalsettings.json
+            readOnly: true
+      - template: deployment.yaml
+        exists:
+          path: spec.template.metadata.annotations["checksum/externalsettings"]
+
+  - it: mounts an existing Secret under its key and renders no Secret of its own
+    set:
+      externalSettings.existingSecret: mine
+      externalSettings.existingSecretKey: settings.json
+    asserts:
+      - template: externalsettings.yaml
+        hasDocuments:
+          count: 0
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.volumes
+          content:
+            name: externalsettings
+            secret:
+              secretName: mine
+              items:
+                - key: settings.json
+                  path: externalsettings.json
+      - template: deployment.yaml
+        notExists:
+          path: spec.template.metadata.annotations["checksum/externalsettings"]

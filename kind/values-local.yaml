@@ -1,0 +1,19 @@
+# Locally built images for the snapcd chart on kind, the counterpart of the Docker deployment's
+# docker-compose.local.yml. scripts/kind-up.sh --local loads them into the cluster and adds this file.
+# Build them first, tagged :local, from the snapcd checkout (see that file for the steps).
+server:
+  image:
+    tag: local
+    pullPolicy: Never
+runner:
+  image:
+    tag: local
+    pullPolicy: Never
+agent:
+  image:
+    tag: local
+    pullPolicy: Never
+  sidecar:
+    image:
+      tag: local
+      pullPolicy: Never

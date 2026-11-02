@@ -16,11 +16,14 @@ spec:
   {{- end }}
   template:
     metadata:
-      {{- if or .Values.podAnnotations (not .Values.config.existingSecret) }}
+      {{- if or .Values.podAnnotations (not .Values.config.existingSecret) .Values.externalSettings.content }}
       annotations:
         {{- if not .Values.config.existingSecret }}
         checksum/config: {{ include "snapcd-server.appsettings" . | sha256sum }}
         {{- end }}
+      {{- if and .Values.externalSettings.content (not .Values.externalSettings.existingSecret) }}
+        checksum/externalsettings: {{ toJson .Values.externalSettings.content | sha256sum }}
+      {{- end }}
         {{- with .Values.podAnnotations }}
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
@@ -91,14 +94,28 @@ spec:
             - name: http
               containerPort: 5000
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/app
             - name: config
               mountPath: /app/appsettings.json
               subPath: appsettings.json
+            {{- if include "snapcd-server.hasExternalSettings" . }}
+            - name: externalsettings
+              mountPath: /app/externalsettings.json
+              subPath: externalsettings.json
+              readOnly: true
+            {{- end }}
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
           {{- with .Values.resources }}
           resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- with .Values.readinessProbe }}
@@ -113,12 +130,24 @@ spec:
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
       volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: home
+          emptyDir: {}
         - name: config
           secret:
             secretName: {{ include "snapcd-server.configSecretName" . }}
             items:
               - key: {{ ternary .Values.config.existingSecretKey "appsettings.json" (not (empty .Values.config.existingSecret)) }}
                 path: appsettings.json
+        {{- if include "snapcd-server.hasExternalSettings" . }}
+        - name: externalsettings
+          secret:
+            secretName: {{ include "snapcd-server.externalSettingsSecretName" . }}
+            items:
+              - key: {{ ternary .Values.externalSettings.existingSecretKey "externalsettings.json" (not (empty .Values.externalSettings.existingSecret)) }}
+                path: externalsettings.json
+        {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

@@ -38,7 +38,9 @@ config:
     Caching:
       Provider: Redis
     Logging:
-      DefaultLogLevel: Information
+      LogLevel:
+        Default: Warning
+        SnapCd: Information
     BackgroundJobs:
       SourceRefresh:
         Cron: '*/9 * * * *'
@@ -143,10 +145,21 @@ serviceAccount:
 podAnnotations: {}
 # -- Pod labels, for example `azure.workload.identity/use: "true"`.
 podLabels: {}
-# -- Pod security context.
-podSecurityContext: {}
-# -- Container security context.
-securityContext: {}
+# -- Pod security context. The defaults meet the restricted pod security profile; the images run as UID and GID 1654, and `fsGroup` makes provisioned volumes writable by it.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1654
+  runAsGroup: 1654
+  fsGroup: 1654
+  seccompProfile:
+    type: RuntimeDefault
+# -- Container security context. The defaults meet the restricted pod security profile.
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
 
 # -- Container resources.
 resources:
@@ -160,6 +173,14 @@ resources:
 # -- Deployment strategy. `Recreate`, because the Server runs as a single replica.
 strategy:
   type: Recreate
+
+# -- Startup probe. Liveness and readiness wait for it to pass, so a slow start is not killed: after a restart against a running database, the Server's message bus can take minutes to start.
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+  periodSeconds: 10
+  failureThreshold: 60
 
 # -- Readiness probe.
 readinessProbe:
@@ -302,10 +323,24 @@ sqlserver:
   podAnnotations: {}
   # -- SQL Server pod labels.
   podLabels: {}
-  # -- SQL Server pod security context.
-  podSecurityContext: {}
-  # -- SQL Server container security context.
-  securityContext: {}
+  # -- SQL Server pod security context. The image runs as `mssql`, UID and GID 10001.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+    fsGroupChangePolicy: OnRootMismatch
+    seccompProfile:
+      type: RuntimeDefault
+  # -- SQL Server container security context. `NET_BIND_SERVICE` is the one capability the restricted profile permits adding, and the `sqlservr` binary will not start without it, since it carries that file capability.
+  securityContext:
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+      add:
+        - NET_BIND_SERVICE
   # -- SQL Server node selector.
   nodeSelector: {}
   # -- SQL Server tolerations.
@@ -341,16 +376,36 @@ redis:
   podAnnotations: {}
   # -- Redis pod labels.
   podLabels: {}
-  # -- Redis pod security context.
-  podSecurityContext: {}
+  # -- Redis pod security context. The image's `redis` user is UID 999, GID 1000.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
   # -- Redis container security context.
-  securityContext: {}
+  securityContext:
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
   # -- Redis node selector.
   nodeSelector: {}
   # -- Redis tolerations.
   tolerations: []
   # -- Redis affinity.
   affinity: {}
+
+externalSettings:
+  # -- `externalsettings.json` as a map, mounted at `/app/externalsettings.json`. Each entry in `Providers` names a `Loader` (`AzureKeyVault`, `AmazonSecretsManager` or `Literal`), its `Configuration`, and in `Data` the settings it supplies. Settings from this file win over `appsettings.json` and environment variables.
+  # @default -- `{}`
+  content: {}
+  # -- Name of an existing Secret holding `externalsettings.json`. When set, `externalSettings.content` is ignored.
+  existingSecret: ""
+  # -- Key of `externalsettings.json` in `externalSettings.existingSecret`.
+  existingSecretKey: externalsettings.json
 
 # -- Extra manifests, rendered through `tpl`.
 extraManifests: []

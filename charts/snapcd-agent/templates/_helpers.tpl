@@ -91,3 +91,11 @@ app.kubernetes.io/managed-by: {{ .ctx.Release.Service }}
 {{- define "snapcd-agent.sidecar.serverUrl" -}}
 {{- default (dig "Server" "Url" "" .Values.config.appsettings) .Values.sidecar.serverUrl }}
 {{- end }}
+
+{{- define "snapcd-agent.externalSettingsSecretName" -}}
+{{- default (printf "%s-externalsettings" (include "snapcd-agent.fullname" .)) .Values.externalSettings.existingSecret }}
+{{- end }}
+
+{{- define "snapcd-agent.hasExternalSettings" -}}
+{{- if or .Values.externalSettings.content .Values.externalSettings.existingSecret }}true{{ end }}
+{{- end }}

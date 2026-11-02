@@ -1,0 +1,12 @@
+{{- if and .Values.externalSettings.content (not .Values.externalSettings.existingSecret) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "snapcd-runner.externalSettingsSecretName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "snapcd-runner.labels" (dict "ctx" $ "component" "runner") | nindent 4 }}
+type: Opaque
+data:
+  externalsettings.json: {{ toPrettyJson .Values.externalSettings.content | b64enc }}
+{{- end }}

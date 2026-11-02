@@ -100,3 +100,11 @@ app.kubernetes.io/managed-by: {{ .ctx.Release.Service }}
 {{- with .Values.workloadIdentity.gcp.serviceAccount }}{{ $_ := set $a "iam.gke.io/gcp-service-account" . }}{{ end }}
 {{- if $a }}{{ toYaml $a }}{{ end }}
 {{- end }}
+
+{{- define "snapcd-runner.externalSettingsSecretName" -}}
+{{- default (printf "%s-externalsettings" (include "snapcd-runner.fullname" .)) .Values.externalSettings.existingSecret }}
+{{- end }}
+
+{{- define "snapcd-runner.hasExternalSettings" -}}
+{{- if or .Values.externalSettings.content .Values.externalSettings.existingSecret }}true{{ end }}
+{{- end }}

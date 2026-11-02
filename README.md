@@ -110,6 +110,8 @@ The charts are published to `oci://ghcr.io/schrieksoft/charts` with each release
 ```bash
 scripts/kind-up.sh               # the snapcd chart
 scripts/kind-up.sh --kustomize   # this Kustomize deployment instead
+scripts/kind-up.sh --local       # with images built locally and tagged :local (combines with --kustomize)
+scripts/kind-up.sh --restricted  # enforce the restricted pod security profile (combines with the others)
 scripts/kind-down.sh             # delete the cluster
 ```
 

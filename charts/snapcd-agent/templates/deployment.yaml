@@ -14,11 +14,14 @@ spec:
       {{- include "snapcd-agent.selectorLabels" (dict "ctx" $ "component" "agent") | nindent 6 }}
   template:
     metadata:
-      {{- if or .Values.podAnnotations (not .Values.config.existingConfigMap) }}
+      {{- if or .Values.podAnnotations (not .Values.config.existingConfigMap) .Values.externalSettings.content }}
       annotations:
         {{- if not .Values.config.existingConfigMap }}
         checksum/config: {{ include "snapcd-agent.appsettings" . | sha256sum }}
         {{- end }}
+      {{- if and .Values.externalSettings.content (not .Values.externalSettings.existingSecret) }}
+        checksum/externalsettings: {{ toJson .Values.externalSettings.content | sha256sum }}
+      {{- end }}
         {{- with .Values.podAnnotations }}
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
@@ -70,9 +73,19 @@ spec:
             {{- tpl (toYaml .) $ | nindent 12 }}
           {{- end }}
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/app
             - name: config
               mountPath: /app/appsettings.json
               subPath: appsettings.json
+            {{- if include "snapcd-agent.hasExternalSettings" . }}
+            - name: externalsettings
+              mountPath: /app/externalsettings.json
+              subPath: externalsettings.json
+              readOnly: true
+            {{- end }}
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -81,12 +94,24 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
       volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: home
+          emptyDir: {}
         - name: config
           configMap:
             name: {{ include "snapcd-agent.configMapName" . }}
             items:
               - key: {{ ternary .Values.config.existingConfigMapKey "appsettings.json" (not (empty .Values.config.existingConfigMap)) }}
                 path: appsettings.json
+        {{- if include "snapcd-agent.hasExternalSettings" . }}
+        - name: externalsettings
+          secret:
+            secretName: {{ include "snapcd-agent.externalSettingsSecretName" . }}
+            items:
+              - key: {{ ternary .Values.externalSettings.existingSecretKey "externalsettings.json" (not (empty .Values.externalSettings.existingSecret)) }}
+                path: externalsettings.json
+        {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

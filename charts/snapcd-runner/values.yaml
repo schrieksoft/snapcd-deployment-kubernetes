@@ -32,6 +32,10 @@ config:
   # -- The Runner's `appsettings.json` as a map, rendered into a ConfigMap. It holds no secrets: the client secret comes from `credentials`. The defaults are the reference deployment's sample settings, the same as `components/runner/config/appsettings.json` and the Docker deployment, and connect to a Server installed as `snapcd-server` in the `snapcd-server` namespace. See the Snap CD runner settings reference for every key.
   # @default -- the reference deployment's sample settings
   appsettings:
+    Logging:
+      LogLevel:
+        Default: Warning
+        SnapCd: Information
     Runner:
       Id: 10000000-0000-0000-0000-000000000000
       Instance: myrunner
@@ -84,6 +88,14 @@ ssh:
   existingKnownHostsConfigMap: ""
   # -- Key of `known_hosts` in `ssh.existingKnownHostsConfigMap`.
   existingKnownHostsConfigMapKey: known_hosts
+  # -- Resources of the `stage-ssh` init container, which only copies two files.
+  resources:
+    requests:
+      memory: 16Mi
+      cpu: 10m
+    limits:
+      memory: 64Mi
+      cpu: 100m
 
 preapprovedHooks:
   # -- Name of an existing ConfigMap holding the pre-approved hook scripts.
@@ -115,6 +127,14 @@ engines:
     tofuVersion: ""
     # -- Terraform version to download. Empty keeps the image's. Snap CD supports Terraform up to 1.5.7.
     terraformVersion: ""
+    # -- Resources of the `download-engines` init container, which downloads and unzips the engine archives.
+    resources:
+      requests:
+        memory: 64Mi
+        cpu: 50m
+      limits:
+        memory: 256Mi
+        cpu: 500m
     image:
       # -- Download image registry. Empty pulls from Docker Hub.
       registry: ""
@@ -154,19 +174,31 @@ serviceAccount:
 podAnnotations: {}
 # -- Pod labels.
 podLabels: {}
-# -- Pod security context.
-podSecurityContext: {}
-# -- Container security context, applied to the Runner and the SSH staging init container.
-securityContext: {}
+# -- Pod security context. The defaults meet the restricted pod security profile; the images run as UID and GID 1654, and `fsGroup` makes provisioned volumes writable by it.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1654
+  runAsGroup: 1654
+  fsGroup: 1654
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+# -- Container security context. The defaults meet the restricted pod security profile.
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
 
-# -- Container resources.
+# -- Container resources. A job runs OpenTofu or Terraform and its provider plugins inside this container, so the limit is sized for jobs rather than for the idle Runner (about 40 Mi); a provider alone can use several hundred MB. Raise it for large plans or many concurrent jobs.
 resources:
   requests:
-    memory: 256Mi
-    cpu: 100m
+    memory: 512Mi
+    cpu: 250m
   limits:
-    memory: 1Gi
-    cpu: 1000m
+    memory: 4Gi
+    cpu: 2000m
 
 # -- StatefulSet update strategy.
 updateStrategy: {}
@@ -196,6 +228,15 @@ extraVolumeMounts: []
 initContainers: []
 # -- Extra containers (sidecars).
 extraContainers: []
+
+externalSettings:
+  # -- `externalsettings.json` as a map, mounted at `/app/externalsettings.json`. Each entry in `Providers` names a `Loader` (`AzureKeyVault`, `AmazonSecretsManager` or `Literal`), its `Configuration`, and in `Data` the settings it supplies. Settings from this file win over `appsettings.json` and environment variables.
+  # @default -- `{}`
+  content: {}
+  # -- Name of an existing Secret holding `externalsettings.json`. When set, `externalSettings.content` is ignored.
+  existingSecret: ""
+  # -- Key of `externalsettings.json` in `externalSettings.existingSecret`.
+  existingSecretKey: externalsettings.json
 
 # -- Extra manifests, rendered through `tpl`.
 extraManifests: []
