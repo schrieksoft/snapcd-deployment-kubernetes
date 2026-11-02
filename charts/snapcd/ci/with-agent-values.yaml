@@ -1,0 +1,9 @@
+agent:
+  enabled: true
+  sidecar:
+    credentials:
+      apiKey: sk-ant-api03-ci-only
+server:
+  ingress:
+    enabled: true
+    host: snapcd.example.com

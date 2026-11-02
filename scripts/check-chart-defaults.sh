@@ -2,8 +2,8 @@
 # Fails when a chart's default settings drift from the Kustomize config they mirror.
 #
 # The charts default to the reference deployment's sample settings, which live in
-# components/<component>/config. Keys the chart derives itself (connection strings, Server.Host)
-# are left out of the chart defaults and so out of the comparison.
+# components/<component>/config. Keys the chart derives itself (connection strings, Server.Host
+# and the Agent's sidecar list) are left out of the chart defaults and so out of the comparison.
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
@@ -51,6 +51,27 @@ failed = False
 for ok, value, source in checks:
     if not ok:
         print(f"charts/snapcd-runner {value} differs from {config}/{source}", file=sys.stderr)
+        failed = True
+sys.exit(1 if failed else 0)
+'
+
+helm show values charts/snapcd-agent | python3 -c '
+import json, sys, yaml
+
+values = yaml.safe_load(sys.stdin)
+config = "components/agent/config"
+expected = json.load(open(f"{config}/appsettings.json"))
+del expected["Agent"]["Sidecars"]
+env = dict(line.split("=", 1) for line in open(f"{config}/agent-secret.env").read().splitlines() if "=" in line)
+
+checks = [
+    (values["config"]["appsettings"] == expected, "config.appsettings", "appsettings.json"),
+    (values["credentials"]["clientSecret"] == env["Agent__ClientSecret"], "credentials.clientSecret", "agent-secret.env"),
+]
+failed = False
+for ok, value, source in checks:
+    if not ok:
+        print(f"charts/snapcd-agent {value} differs from {config}/{source}", file=sys.stderr)
         failed = True
 sys.exit(1 if failed else 0)
 '

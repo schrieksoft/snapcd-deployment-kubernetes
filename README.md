@@ -43,8 +43,8 @@ snapcd-deployment-kubernetes/
 │   └── agent/                      # namespace: snapcd-agent
 │       ├── kustomization.yaml
 │       ├── namespace.yaml
-│       ├── agent.yaml              # Deployment (orchestrator)
-│       ├── sidecar-claude.yaml     # Deployment + Service (Claude sidecar)
+│       ├── generated.yaml          # Agent and Claude sidecar, rendered from charts/snapcd-agent
+│       ├── kustomize-values.yaml   # Chart values the render uses
 │       └── config/
 │           ├── appsettings.json    # ConfigMap (ClientId only)
 │           ├── agent-secret.env    # Agent__ClientSecret
@@ -221,9 +221,9 @@ kubectl exec -n snapcd-agent deployment/snapcd-agent-sidecar-claude -- \
 
 That file feeds a `secretGenerator`, so `kubectl apply -k .` after editing it is enough to roll the new value out.
 
-The sidecar reaches the Server for MCP via `SNAPCD_BASE_URL` (set in `sidecar-claude.yaml`, `/mcp` is appended). It refuses to start without it, which surfaces as the orchestrator failing to connect on port 7001.
+The sidecar reaches the Server for MCP via `SNAPCD_BASE_URL` (set in `generated.yaml` from the Agent's `Server.Url`, `/mcp` is appended). It refuses to start without it, which surfaces as the orchestrator failing to connect on port 7001.
 
-If you've configured a different inference provider for your organization, swap `components/agent/sidecar-claude.yaml` for the matching sidecar manifest.
+If you've configured a different inference provider for your organization, set `sidecar.enabled: false` in `components/agent/kustomize-values.yaml`, re-render with `scripts/render-kustomize.sh`, and add the matching sidecar manifest to `components/agent/kustomization.yaml`.
 
 ## Customization patterns
 

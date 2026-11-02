@@ -1,0 +1,15 @@
+apiVersion: v2
+name: snapcd-agent
+description: The Snap CD Agent, with its Claude sidecar for inference.
+type: application
+# Stamped by the release pipeline from the repo version.
+version: 0.0.0
+# renovate: datasource=docker depName=ghcr.io/schrieksoft/snapcd/snapcd-agent
+appVersion: "1.15.6"
+home: https://snapcd.io
+sources:
+  - https://github.com/schrieksoft/snapcd
+  - https://github.com/schrieksoft/snapcd-deployment-kubernetes
+keywords:
+  - snapcd
+  - agent

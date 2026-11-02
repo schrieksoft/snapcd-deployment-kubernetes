@@ -7,3 +7,7 @@
 # AI assistant scratch directories
 .claude/
 .cursor/
+
+# Packaged dependencies of the umbrella chart, from helm dependency update
+charts/snapcd/charts/
+charts/snapcd/Chart.lock

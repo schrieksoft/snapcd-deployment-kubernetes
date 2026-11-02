@@ -5,8 +5,7 @@ namespace: snapcd-agent
 
 resources:
   - namespace.yaml
-  - agent.yaml
-  - sidecar-claude.yaml
+  - generated.yaml
 
 configMapGenerator:
   - name: snapcd-agent-config

@@ -1,0 +1,32 @@
+apiVersion: v2
+name: snapcd
+description: Snap CD in one release - the Server, a Runner and optionally the Agent, in one namespace.
+type: application
+# Stamped by the release pipeline from the repo version, here and in the dependencies.
+version: 0.0.0
+# renovate: datasource=docker depName=ghcr.io/schrieksoft/snapcd/snapcd-server
+appVersion: "1.15.6"
+home: https://snapcd.io
+sources:
+  - https://github.com/schrieksoft/snapcd
+  - https://github.com/schrieksoft/snapcd-deployment-kubernetes
+keywords:
+  - snapcd
+  - terraform
+  - opentofu
+dependencies:
+  - name: snapcd-server
+    alias: server
+    version: 0.0.0
+    repository: file://../snapcd-server
+    condition: server.enabled
+  - name: snapcd-runner
+    alias: runner
+    version: 0.0.0
+    repository: file://../snapcd-runner
+    condition: runner.enabled
+  - name: snapcd-agent
+    alias: agent
+    version: 0.0.0
+    repository: file://../snapcd-agent
+    condition: agent.enabled

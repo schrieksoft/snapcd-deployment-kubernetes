@@ -1,0 +1,27 @@
+server:
+  # -- Install the Server. See the snapcd-server chart for its values, set here under `server`.
+  enabled: true
+  # -- The Server's resource name, which the Runner and the Agent below connect to.
+  fullnameOverride: snapcd-server
+
+runner:
+  # -- Install a Runner. See the snapcd-runner chart for its values, set here under `runner`.
+  enabled: true
+  # -- The Runner's resource name.
+  fullnameOverride: snapcd-runner
+  config:
+    appsettings:
+      Server:
+        # -- The Server in the same namespace.
+        Url: http://snapcd-server:5000
+
+agent:
+  # -- Install the Agent. Off by default, since its Claude sidecar needs a credential: set `agent.sidecar.credentials.oauthToken` or `apiKey` when turning it on. See the snapcd-agent chart for its values, set here under `agent`.
+  enabled: false
+  # -- The Agent's resource name.
+  fullnameOverride: snapcd-agent
+  config:
+    appsettings:
+      Server:
+        # -- The Server in the same namespace.
+        Url: http://snapcd-server:5000

@@ -1,0 +1,22 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.appVersionBadge" . }}
+
+{{ template "chart.description" . }}
+
+## Installing
+
+```bash
+helm install snapcd-agent ./charts/snapcd-agent --namespace snapcd-agent --create-namespace \
+  --set sidecar.credentials.apiKey='<your Anthropic API key>'
+```
+
+The Claude sidecar needs exactly one Anthropic credential: `sidecar.credentials.oauthToken` for a Claude subscription, `sidecar.credentials.apiKey` for an API key, or `sidecar.credentials.existingSecret`. The install fails with neither, since the sidecar would otherwise start healthy and only fail when a mission calls for inference. `sidecar.enabled=false` runs the Agent without it.
+
+The defaults are the reference deployment's sample settings, the same as the Docker deployment: the Agent connects as the pre-seeded `defaultAgent` service principal to a Server installed as `snapcd-server` in the `snapcd-server` namespace. Every credential in them is public.
+
+{{ template "chart.homepageLine" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.valuesSection" . }}
