@@ -1,0 +1,23 @@
+repos:
+  - repo: local
+    hooks:
+      - id: render-kustomize
+        name: Render Kustomize manifests from the charts
+        entry: scripts/render-kustomize.sh
+        language: system
+        files: ^(charts/|components/.*/kustomize-values\.yaml$|scripts/render-kustomize\.sh$)
+        pass_filenames: false
+
+      - id: check-chart-defaults
+        name: Chart defaults match the Kustomize config
+        entry: scripts/check-chart-defaults.sh
+        language: system
+        files: ^(charts/.*/values\.yaml$|components/.*/config/)
+        pass_filenames: false
+
+      - id: helm-docs
+        name: Generate chart READMEs
+        entry: helm-docs --chart-search-root charts
+        language: system
+        files: ^charts/
+        pass_filenames: false

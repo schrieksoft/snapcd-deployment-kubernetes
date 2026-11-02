@@ -1,0 +1,5 @@
+# Server chart values for the local kind cluster. scripts/kind-up.sh adds the public port.
+ingress:
+  enabled: true
+  className: nginx
+  host: snapcd.localhost

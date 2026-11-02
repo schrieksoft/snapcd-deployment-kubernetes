@@ -11,6 +11,17 @@
     "managerFilePatterns": ["/^components/.+\\.yaml$/"]
   },
 
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "appVersion in each chart, annotated with the image it tracks",
+      "managerFilePatterns": ["/^charts/[^/]+/Chart\\.yaml$/"],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\nappVersion:\\s*\"?(?<currentValue>[^\"\\s]+)\"?"
+      ]
+    }
+  ],
+
   "packageRules": [
     {
       "matchPackageNames": ["*"],
@@ -27,7 +38,12 @@
         "/^SnapCd\\./",
         "/^ghcr\\.io\\/schrieksoft\\/snapcd/"
       ],
-      "enabled": true
+      "enabled": true,
+      "postUpgradeTasks": {
+        "commands": ["install-tool helm v3.16.4", "scripts/render-kustomize.sh"],
+        "fileFilters": ["components/*/generated.yaml"],
+        "executionMode": "branch"
+      }
     }
   ],
   "prHourlyLimit": 10,

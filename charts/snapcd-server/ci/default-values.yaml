@@ -1,0 +1,7 @@
+config:
+  appsettings:
+    Server:
+      Host: http://localhost:5000
+sqlserver:
+  auth:
+    saPassword: Ci-Only-Passw0rd

@@ -1,0 +1,144 @@
+suite: appsettings
+templates:
+  - secret.yaml
+release:
+  name: snapcd-server
+  namespace: snapcd-server
+tests:
+  - it: derives Server.Host from an ingress with TLS
+    set:
+      sqlserver.auth.saPassword: p
+      ingress:
+        enabled: true
+        host: snapcd.example.com
+        tls:
+          - secretName: tls
+            hosts: [snapcd.example.com]
+    asserts:
+      - matchRegex:
+          path: data["appsettings.json"]
+          pattern: '"Host": "https://snapcd.example.com"'
+          decodeBase64: true
+
+  - it: derives Server.Host from the first HTTPRoute hostname
+    set:
+      sqlserver.auth.saPassword: p
+      httpRoute:
+        enabled: true
+        parentRefs: [{name: public}]
+        hostnames: [snapcd.example.com]
+    asserts:
+      - matchRegex:
+          path: data["appsettings.json"]
+          pattern: '"Host": "https://snapcd.example.com"'
+          decodeBase64: true
+
+  - it: appends a non-default public port to the derived Server.Host
+    set:
+      sqlserver.auth.saPassword: p
+      ingress:
+        enabled: true
+        host: snapcd.localtest.me
+        publicPort: 9080
+    asserts:
+      - matchRegex:
+          path: data["appsettings.json"]
+          pattern: '"Host": "http://snapcd.localtest.me:9080"'
+          decodeBase64: true
+
+  - it: fails when Server.Host disagrees with the ingress host
+    set:
+      sqlserver.auth.saPassword: p
+      config.appsettings.Server.Host: https://other.example.com
+      ingress:
+        enabled: true
+        host: snapcd.example.com
+        tls:
+          - secretName: tls
+            hosts: [snapcd.example.com]
+    asserts:
+      - failedTemplate:
+          errorPattern: 'is "https://other.example.com" but the Server is exposed as "https://snapcd.example.com"'
+
+  - it: accepts a Server.Host that matches the ingress apart from a trailing slash
+    set:
+      sqlserver.auth.saPassword: p
+      config.appsettings.Server.Host: http://snapcd.example.com/
+      ingress:
+        enabled: true
+        host: snapcd.example.com
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: defaults Server.Host to the port-forward address when nothing exposes the Server
+    asserts:
+      - matchRegex:
+          path: data["appsettings.json"]
+          pattern: '"Host": "http://localhost:5000"'
+          decodeBase64: true
+
+  - it: derives the database, transport and cache connection strings from the bundled services
+    set:
+      sqlserver.auth.saPassword: p
+      config.appsettings.Server.Host: http://localhost:5000
+    asserts:
+      - matchRegex:
+          path: data["appsettings.json"]
+          pattern: '"ConnectionString": "Server=snapcd-server-sqlserver.snapcd-server.svc.cluster.local,1433;Database=SnapCd;User Id=sa;Password=p;TrustServerCertificate=True"'
+          decodeBase64: true
+      - matchRegex:
+          path: data["appsettings.json"]
+          pattern: '"BusType": "SqlServer"'
+          decodeBase64: true
+      - matchRegex:
+          path: data["appsettings.json"]
+          pattern: '"ConnectionString": "snapcd-server-redis.snapcd-server.svc.cluster.local:6379"'
+          decodeBase64: true
+
+  - it: keeps a connection string the user set in appsettings
+    set:
+      sqlserver.auth.saPassword: p
+      config.appsettings:
+        Server: {Host: http://localhost:5000}
+        ConnectionString: Server=mine
+    asserts:
+      - matchRegex:
+          path: data["appsettings.json"]
+          pattern: '"ConnectionString": "Server=mine"'
+          decodeBase64: true
+
+  - it: uses database.connectionString when the bundled SQL Server is off
+    set:
+      config.appsettings.Server.Host: http://localhost:5000
+      sqlserver.enabled: false
+      database.connectionString: Server=external
+    asserts:
+      - matchRegex:
+          path: data["appsettings.json"]
+          pattern: '"ConnectionString": "Server=external"'
+          decodeBase64: true
+
+  - it: fails when no database connection string can be found
+    set:
+      config.appsettings.Server.Host: http://localhost:5000
+      sqlserver.enabled: false
+    asserts:
+      - failedTemplate:
+          errorPattern: 'The Server has no database connection string'
+
+  - it: fails when the bundled SQL Server password lives in an existing Secret and nothing else supplies the connection string
+    set:
+      config.appsettings.Server.Host: http://localhost:5000
+      sqlserver.auth.saPassword: ""
+      sqlserver.auth.existingSecret: sql
+    asserts:
+      - failedTemplate:
+          errorPattern: 'cannot be derived'
+
+  - it: renders no config Secret when config.existingSecret is set
+    set:
+      config.existingSecret: mine
+      sqlserver.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

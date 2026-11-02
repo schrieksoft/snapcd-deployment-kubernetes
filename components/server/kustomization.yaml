@@ -5,9 +5,7 @@ namespace: snapcd-server
 
 resources:
   - namespace.yaml
-  - sql-server.yaml
-  - redis.yaml
-  - server.yaml
+  - generated.yaml
 
 secretGenerator:
   - name: snapcd-server-config

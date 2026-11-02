@@ -1,0 +1,105 @@
+suite: deployment
+templates:
+  - deployment.yaml
+release:
+  name: snapcd-server
+  namespace: snapcd-server
+set:
+  config.appsettings.Server.Host: http://localhost:5000
+  sqlserver.auth.saPassword: p
+tests:
+  - it: defaults the image tag to appVersion
+    chart:
+      appVersion: 9.9.9
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/schrieksoft/snapcd/snapcd-server:9.9.9
+
+  - it: prefers a digest over the tag
+    set:
+      image.digest: sha256:abc
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/schrieksoft/snapcd/snapcd-server@sha256:abc
+
+  - it: pulls through a mirror registry
+    set:
+      image.registry: artifactory.example.com/ghcr
+      image.tag: 1.2.3
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: artifactory.example.com/ghcr/schrieksoft/snapcd/snapcd-server:1.2.3
+
+  - it: restarts the pod when the rendered config changes
+    asserts:
+      - exists:
+          path: spec.template.metadata.annotations["checksum/config"]
+
+  - it: has no config checksum when the config comes from an existing Secret
+    set:
+      config.existingSecret: mine
+      config.existingSecretKey: settings.json
+    asserts:
+      - notExists:
+          path: spec.template.metadata.annotations["checksum/config"]
+      - equal:
+          path: spec.template.spec.volumes[0].secret
+          value:
+            secretName: mine
+            items:
+              - key: settings.json
+                path: appsettings.json
+
+  - it: injects connection strings from existing Secrets as environment variables
+    set:
+      config.existingSecret: mine
+      sqlserver.enabled: false
+      redis.enabled: false
+      database.existingSecret: db
+      cache.existingSecret: cache
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: db
+                key: connection-string
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ServiceBus__TransportOptions__SqlServer__ConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: db
+                key: connection-string
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: Caching__ConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: cache
+                key: connection-string
+
+  - it: carries workload identity labels and annotations
+    set:
+      podLabels:
+        azure.workload.identity/use: "true"
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["azure.workload.identity/use"]
+          value: "true"
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: snapcd-server
+
+  - it: never exposes a replica count
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1

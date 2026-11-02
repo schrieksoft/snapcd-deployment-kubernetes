@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/README.md'
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+
+    outputs:
+      version: ${{ steps.gitversion.outputs.SemVer }}
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for GitVersion
+
+      # `+norelease` is ours, not GitVersion's: the `+semver:` directives only steer the version.
+      - name: Check for +norelease
+        id: norelease
+        run: |
+          if git log -1 --format=%B | grep -qiE '\+norelease\b'; then
+            echo "Commit carries +norelease, this commit will not publish a release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install GitVersion
+        if: steps.norelease.outputs.skip != 'true'
+        uses: gittools/actions/gitversion/setup@v3.1.11
+        with:
+          versionSpec: 5.x
+
+      - name: Determine Version
+        if: steps.norelease.outputs.skip != 'true'
+        uses: gittools/actions/gitversion/execute@v3.1.11
+        id: gitversion
+        with:
+          useConfigFile: true
+          configFilePath: gitversion.yaml
+
+      # `+semver: none` leaves the version equal to an existing tag, and a published version is never overwritten.
+      - name: Check the version moved
+        if: steps.norelease.outputs.skip != 'true'
+        id: moved
+        env:
+          SEMVER: ${{ steps.gitversion.outputs.SemVer }}
+        run: |
+          echo "Version: ${SEMVER}"
+          if git rev-parse -q --verify "refs/tags/${SEMVER}" >/dev/null; then
+            echo "Tag ${SEMVER} already exists, nothing to publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Release
+        if: github.ref == 'refs/heads/main' && steps.norelease.outputs.skip != 'true' && steps.moved.outputs.publish == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SEMVER: ${{ steps.gitversion.outputs.SemVer }}
+        run: |
+          ./scripts/release-notes.sh > "$RUNNER_TEMP/release-notes.md"
+          echo "--- release notes ---"
+          cat "$RUNNER_TEMP/release-notes.md"
+
+          gh release create "${SEMVER}" \
+            --title "${SEMVER}" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            -R "${GITHUB_REPOSITORY}"

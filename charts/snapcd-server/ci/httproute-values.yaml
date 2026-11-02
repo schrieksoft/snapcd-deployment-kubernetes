@@ -1,0 +1,10 @@
+sqlserver:
+  auth:
+    saPassword: Ci-Only-Passw0rd
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: public
+      namespace: istio-ingress
+  hostnames:
+    - snapcd.example.com

@@ -1,0 +1,13 @@
+sqlserver:
+  auth:
+    saPassword: Ci-Only-Passw0rd
+ingress:
+  enabled: true
+  className: nginx
+  host: snapcd.example.com
+  tls:
+    - secretName: snapcd-server-tls
+      hosts:
+        - snapcd.example.com
+podDisruptionBudget:
+  enabled: true

@@ -1,0 +1,24 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.appVersionBadge" . }}
+
+{{ template "chart.description" . }}
+
+## Installing
+
+```bash
+helm install snapcd-server ./charts/snapcd-server --namespace snapcd-server --create-namespace
+kubectl -n snapcd-server port-forward svc/snapcd-server 5000:5000
+```
+
+The dashboard is then at http://localhost:5000. The defaults are the reference deployment's sample settings, the same as the Docker deployment: they work as installed, and every key, password and pre-seeded credential in them is public. Replace them before the Server holds anything that matters.
+
+The bundled SQL Server and Redis are for trials. For anything else, turn them off and point the Server at managed services with `database.*` and `cache.*`.
+
+`config.appsettings` is the Server's `appsettings.json` as a map. The chart fills in the database, transport and cache connection strings from the bundled services when those keys are absent, and `Server.Host` from the ingress or HTTPRoute host. `Server.Host` is the token issuer: when it is set and the Server is exposed on a different host, the render fails.
+
+{{ template "chart.homepageLine" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.valuesSection" . }}

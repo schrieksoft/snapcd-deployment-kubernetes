@@ -17,14 +17,14 @@ Each component is a self-contained Kustomize overlay under `components/` and dep
 
 ```
 snapcd-deployment-kubernetes/
-├── kustomization.yaml              # Root — aggregates the three component overlays
+├── kustomization.yaml              # Root, aggregates the three component overlays
+├── charts/                         # Helm charts; the generated.yaml files are rendered from these
 ├── components/
 │   ├── server/                     # namespace: snapcd-server
 │   │   ├── kustomization.yaml
 │   │   ├── namespace.yaml
-│   │   ├── sql-server.yaml         # StatefulSet + headless Service (`sqlserver`)
-│   │   ├── redis.yaml              # Deployment + Service (`redis`)
-│   │   ├── server.yaml             # Deployment + Service (`snapcd-server`)
+│   │   ├── generated.yaml          # Server, SQL Server and Redis, rendered from charts/snapcd-server
+│   │   ├── kustomize-values.yaml   # Chart values the render uses
 │   │   └── config/
 │   │       ├── appsettings.json    # Mounted as a Secret (signing keys live here)
 │   │       └── sql-secret.env      # SA_PASSWORD env file
@@ -71,7 +71,9 @@ These URLs are baked into the shipped `appsettings.json` files. If your cluster 
 
 ```bash
 kubectl apply -k .
-kubectl get pods -A -l 'app in (snapcd-server,snapcd-runner,snapcd-agent,sqlserver,redis,snapcd-agent-sidecar-claude)'
+kubectl get pods -n snapcd-server
+kubectl get pods -n snapcd-runner
+kubectl get pods -n snapcd-agent
 kubectl logs -n snapcd-server deployment/snapcd-server -f
 ```
 
