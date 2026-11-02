@@ -98,6 +98,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "${GITHUB_TOKEN}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+          echo "${GITHUB_TOKEN}" | cosign login ghcr.io --username "${{ github.actor }}" --password-stdin
           for package in "$RUNNER_TEMP"/charts/*.tgz; do
             output="$(helm push "$package" oci://ghcr.io/schrieksoft/charts 2>&1)"
             echo "$output"
