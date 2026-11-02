@@ -93,6 +93,27 @@ Visit <http://localhost:5000> and sign in with the pre-seeded credentials:
 
 The Runner and Agent both register automatically using the `default` / `defaultAgent` Service Principals that the Server pre-seeds on first start. For the all-in-one apply they need no further configuration.
 
+## Helm charts
+
+The same deployment is available as Helm charts in `charts/`: `snapcd` for the whole stack in one namespace, and `snapcd-server`, `snapcd-runner` and `snapcd-agent` for one component each. Each chart's README lists its values. The Kustomize manifests in `components/*/generated.yaml` are rendered from these charts by `scripts/render-kustomize.sh`; change the chart or `kustomize-values.yaml`, not the generated file.
+
+```bash
+helm dependency update ./charts/snapcd
+helm install snapcd ./charts/snapcd --namespace snapcd --create-namespace
+```
+
+## A local cluster with kind
+
+`scripts/kind-up.sh` creates a kind cluster with an ingress and installs the stack, reachable at <http://snapcd.localhost:9080> with the pre-seeded admin. Set `KIND_HTTP_PORT` if 9080 is taken.
+
+```bash
+scripts/kind-up.sh               # the snapcd chart
+scripts/kind-up.sh --kustomize   # this Kustomize deployment instead
+scripts/kind-down.sh             # delete the cluster
+```
+
+With the chart, the Agent is installed when `kind/agent.env` holds a Claude credential; copy `kind/agent.env.example` to start. The Agent also needs an Enterprise licence on the organization to connect.
+
 ## Bringing up a single component
 
 ### Server (only)
