@@ -1,0 +1,32 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.appVersionBadge" . }}
+
+{{ template "chart.description" . }}
+
+## Installing
+
+```bash
+helm install snapcd oci://ghcr.io/schrieksoft/charts/snapcd --namespace snapcd --create-namespace
+kubectl -n snapcd port-forward svc/snapcd-server 5000:5000
+```
+
+The dashboard is then at http://localhost:5000, with the pre-seeded admin of the reference deployment, and the Runner is already connected. Every default is the reference deployment's public sample settings, the same as the Docker deployment; replace the keys, passwords and credentials before the Server holds anything that matters.
+
+To add the Agent:
+
+```bash
+helm upgrade snapcd oci://ghcr.io/schrieksoft/charts/snapcd --namespace snapcd --reuse-values \
+  --set agent.enabled=true \
+  --set agent.sidecar.credentials.apiKey='<your Anthropic API key>'
+```
+
+Each component's values go under its key: `server`, `runner` and `agent`, as documented in the snapcd-server, snapcd-runner and snapcd-agent charts.
+
+{{ template "chart.homepageLine" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

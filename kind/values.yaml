@@ -1,0 +1,7 @@
+# snapcd chart values for the local kind cluster. scripts/kind-up.sh adds the public port,
+# and turns the Agent on when kind/agent.env holds a Claude credential.
+server:
+  ingress:
+    enabled: true
+    className: nginx
+    host: snapcd.localhost

@@ -1,0 +1,83 @@
+suite: agent
+templates:
+  - configmap.yaml
+  - sidecar.yaml
+release:
+  name: snapcd-agent
+  namespace: snapcd-agent
+set:
+  sidecar.credentials.apiKey: k
+tests:
+  - it: points the Agent at the sidecar it deploys
+    template: configmap.yaml
+    asserts:
+      - matchRegex:
+          path: data["appsettings.json"]
+          pattern: '"BaseUrl": "http://snapcd-agent-sidecar-claude.snapcd-agent.svc.cluster.local:7001"'
+
+  - it: keeps Agent.Sidecars the user set
+    template: configmap.yaml
+    set:
+      config.appsettings.Agent.Sidecars:
+        - Name: other
+          BaseUrl: http://other:1
+    asserts:
+      - matchRegex:
+          path: data["appsettings.json"]
+          pattern: '"BaseUrl": "http://other:1"'
+      - notMatchRegex:
+          path: data["appsettings.json"]
+          pattern: sidecar-claude
+
+  - it: lists no sidecar when it is disabled
+    template: configmap.yaml
+    set:
+      sidecar.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["appsettings.json"]
+          pattern: Sidecars
+
+  - it: fails when the sidecar has no credential
+    template: sidecar.yaml
+    set:
+      sidecar.credentials.apiKey: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: 'The Claude sidecar needs a credential'
+
+  - it: fails when both credentials are set
+    template: sidecar.yaml
+    set:
+      sidecar.credentials.oauthToken: t
+    asserts:
+      - failedTemplate:
+          errorPattern: 'not both'
+
+  - it: accepts an existing Secret without inspecting it
+    template: sidecar.yaml
+    set:
+      sidecar.credentials.apiKey: ""
+      sidecar.credentials.existingSecret: mine
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: gives the sidecar the Agent's Server URL for MCP
+    template: sidecar.yaml
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SNAPCD_BASE_URL
+            value: http://snapcd-server.snapcd-server.svc.cluster.local:5000
+
+  - it: renders nothing for the sidecar when disabled
+    template: sidecar.yaml
+    set:
+      sidecar.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

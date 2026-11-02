@@ -1,0 +1,13 @@
+# Values for rendering components/server/generated.yaml with scripts/render-kustomize.sh.
+# Names and Secrets match what kustomization.yaml generates from config/.
+fullnameOverride: snapcd-server
+config:
+  existingSecret: snapcd-server-config
+serviceAccount:
+  create: false
+sqlserver:
+  fullnameOverride: sqlserver
+  auth:
+    existingSecret: sqlserver-credentials
+redis:
+  fullnameOverride: redis

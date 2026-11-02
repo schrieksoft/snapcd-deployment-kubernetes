@@ -1,0 +1,13 @@
+replicaCount: 2
+podManagementPolicy: Parallel
+workloadIdentity:
+  azure:
+    clientId: 00000000-0000-0000-0000-000000000000
+ssh:
+  privateKey: |
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    ci-only-not-a-key
+    -----END OPENSSH PRIVATE KEY-----
+persistence:
+  storageClass: managed-csi
+  size: 20Gi

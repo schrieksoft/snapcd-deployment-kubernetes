@@ -1,0 +1,12 @@
+config:
+  appsettings:
+    Server:
+      Host: http://localhost:5000
+database:
+  connectionString: Server=sql.example.com,1433;Database=SnapCd;User Id=snapcd;Password=ci-only;Encrypt=True
+cache:
+  connectionString: redis.example.com:6380,ssl=True
+sqlserver:
+  enabled: false
+redis:
+  enabled: false

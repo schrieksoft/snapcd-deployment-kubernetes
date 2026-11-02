@@ -1,0 +1,5 @@
+engines:
+  download:
+    enabled: true
+    tofuVersion: 1.8.8
+    terraformVersion: 1.5.7

@@ -1,0 +1,10 @@
+image:
+  repository: schrieksoft/snapcd/snapcd-runner
+ssh:
+  knownHosts: ""
+preapprovedHooks:
+  hooks: {}
+persistence:
+  enabled: false
+serviceAccount:
+  create: false

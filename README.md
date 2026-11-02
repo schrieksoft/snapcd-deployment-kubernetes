@@ -17,21 +17,22 @@ Each component is a self-contained Kustomize overlay under `components/` and dep
 
 ```
 snapcd-deployment-kubernetes/
-├── kustomization.yaml              # Root — aggregates the three component overlays
+├── kustomization.yaml              # Root, aggregates the three component overlays
+├── charts/                         # Helm charts; the generated.yaml files are rendered from these
 ├── components/
 │   ├── server/                     # namespace: snapcd-server
 │   │   ├── kustomization.yaml
 │   │   ├── namespace.yaml
-│   │   ├── sql-server.yaml         # StatefulSet + headless Service (`sqlserver`)
-│   │   ├── redis.yaml              # Deployment + Service (`redis`)
-│   │   ├── server.yaml             # Deployment + Service (`snapcd-server`)
+│   │   ├── generated.yaml          # Server, SQL Server and Redis, rendered from charts/snapcd-server
+│   │   ├── kustomize-values.yaml   # Chart values the render uses
 │   │   └── config/
 │   │       ├── appsettings.json    # Mounted as a Secret (signing keys live here)
 │   │       └── sql-secret.env      # SA_PASSWORD env file
 │   ├── runner/                     # namespace: snapcd-runner
 │   │   ├── kustomization.yaml
 │   │   ├── namespace.yaml
-│   │   ├── runner.yaml             # StatefulSet (init-container downloads engines)
+│   │   ├── generated.yaml          # StatefulSet, rendered from charts/snapcd-runner
+│   │   ├── kustomize-values.yaml   # Chart values the render uses
 │   │   └── config/
 │   │       ├── appsettings.json    # ConfigMap (no secrets — ClientId only)
 │   │       ├── runner-secret.env   # Runner__Credentials__ClientSecret
@@ -42,8 +43,8 @@ snapcd-deployment-kubernetes/
 │   └── agent/                      # namespace: snapcd-agent
 │       ├── kustomization.yaml
 │       ├── namespace.yaml
-│       ├── agent.yaml              # Deployment (orchestrator)
-│       ├── sidecar-claude.yaml     # Deployment + Service (Claude sidecar)
+│       ├── generated.yaml          # Agent and Claude sidecar, rendered from charts/snapcd-agent
+│       ├── kustomize-values.yaml   # Chart values the render uses
 │       └── config/
 │           ├── appsettings.json    # ConfigMap (ClientId only)
 │           ├── agent-secret.env    # Agent__ClientSecret
@@ -71,7 +72,9 @@ These URLs are baked into the shipped `appsettings.json` files. If your cluster 
 
 ```bash
 kubectl apply -k .
-kubectl get pods -A -l 'app in (snapcd-server,snapcd-runner,snapcd-agent,sqlserver,redis,snapcd-agent-sidecar-claude)'
+kubectl get pods -n snapcd-server
+kubectl get pods -n snapcd-runner
+kubectl get pods -n snapcd-agent
 kubectl logs -n snapcd-server deployment/snapcd-server -f
 ```
 
@@ -89,6 +92,28 @@ Visit <http://localhost:5000> and sign in with the pre-seeded credentials:
 > Change this password before you put the deployment in front of anything that matters.
 
 The Runner and Agent both register automatically using the `default` / `defaultAgent` Service Principals that the Server pre-seeds on first start. For the all-in-one apply they need no further configuration.
+
+## Helm charts
+
+The same deployment is available as Helm charts in `charts/`: `snapcd` for the whole stack in one namespace, and `snapcd-server`, `snapcd-runner` and `snapcd-agent` for one component each. Each chart's README lists its values. The Kustomize manifests in `components/*/generated.yaml` are rendered from these charts by `scripts/render-kustomize.sh`; change the chart or `kustomize-values.yaml`, not the generated file.
+
+```bash
+helm install snapcd oci://ghcr.io/schrieksoft/charts/snapcd --namespace snapcd --create-namespace
+```
+
+The charts are published to `oci://ghcr.io/schrieksoft/charts` with each release of this repo, signed with cosign. From a checkout, run `helm dependency update ./charts/snapcd` first and install `./charts/snapcd`.
+
+## A local cluster with kind
+
+`scripts/kind-up.sh` creates a kind cluster with an ingress and installs the stack, reachable at <http://snapcd.localhost:9080> with the pre-seeded admin. Set `KIND_HTTP_PORT` if 9080 is taken.
+
+```bash
+scripts/kind-up.sh               # the snapcd chart
+scripts/kind-up.sh --kustomize   # this Kustomize deployment instead
+scripts/kind-down.sh             # delete the cluster
+```
+
+With the chart, the Agent is installed when `kind/agent.env` holds a Claude credential; copy `kind/agent.env.example` to start. The Agent also needs an Enterprise licence on the organization to connect.
 
 ## Bringing up a single component
 
@@ -167,11 +192,18 @@ Drop approved hook scripts into `components/runner/config/preapproved-hooks/` an
 
 #### Multiple replicas
 
-Bump `spec.replicas` in `components/runner/runner.yaml`. Each replica gets its own PVC and a unique instance name (`snapcd-runner-0`, `snapcd-runner-1`, …) — the runner's `Runner__Instance` env var is set from the pod name.
+Set `replicaCount` in `components/runner/kustomize-values.yaml` and run `scripts/render-kustomize.sh`, or patch `spec.replicas` in `components/runner/kustomization.yaml`. Each replica gets its own PVC and connects under its pod name (`snapcd-runner-0`, `snapcd-runner-1`, and so on), since `Runner__Instance` is set from the pod name. The Runner record needs `allow_multiple_instances` for more than one to connect.
 
 #### Engine versions
 
-The init container in `runner.yaml` downloads `tofu` 1.8.8 and `terraform` 1.5.7. To pin different versions, edit the `env` block at the top of the file.
+The Runner image ships OpenTofu and Terraform. To run other versions, set `engines.download` in `components/runner/kustomize-values.yaml` and run `scripts/render-kustomize.sh`: an init container then downloads the versions you name, checks them against the release's SHA256SUMS, and mounts them over the image's.
+
+```yaml
+engines:
+  download:
+    enabled: true
+    tofuVersion: 1.8.8
+```
 
 > Snap CD strives to support the latest available version of `tofu`. For `terraform` we design for binaries up to release [1.5.7](https://github.com/hashicorp/terraform/releases/tag/v1.5.7), the final release under the [Mozilla Public License 2.0](https://github.com/hashicorp/terraform/blob/v1.5.7/LICENSE).
 
@@ -211,9 +243,9 @@ kubectl exec -n snapcd-agent deployment/snapcd-agent-sidecar-claude -- \
 
 That file feeds a `secretGenerator`, so `kubectl apply -k .` after editing it is enough to roll the new value out.
 
-The sidecar reaches the Server for MCP via `SNAPCD_BASE_URL` (set in `sidecar-claude.yaml`, `/mcp` is appended). It refuses to start without it, which surfaces as the orchestrator failing to connect on port 7001.
+The sidecar reaches the Server for MCP via `SNAPCD_BASE_URL` (set in `generated.yaml` from the Agent's `Server.Url`, `/mcp` is appended). It refuses to start without it, which surfaces as the orchestrator failing to connect on port 7001.
 
-If you've configured a different inference provider for your organization, swap `components/agent/sidecar-claude.yaml` for the matching sidecar manifest.
+If you've configured a different inference provider for your organization, set `sidecar.enabled: false` in `components/agent/kustomize-values.yaml`, re-render with `scripts/render-kustomize.sh`, and add the matching sidecar manifest to `components/agent/kustomization.yaml`.
 
 ## Customization patterns
 

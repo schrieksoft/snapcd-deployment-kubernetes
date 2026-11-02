@@ -1,0 +1,136 @@
+{{- if .Values.sqlserver.enabled }}
+{{- if not (or .Values.sqlserver.auth.saPassword .Values.sqlserver.auth.existingSecret) }}
+{{- fail "sqlserver.auth.saPassword or sqlserver.auth.existingSecret is required when sqlserver.enabled is true." }}
+{{- end }}
+{{- $name := include "snapcd-server.sqlserver.fullname" . }}
+{{- if not .Values.sqlserver.auth.existingSecret }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "snapcd-server.sqlserver.secretName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "snapcd-server.labels" (dict "ctx" $ "component" "sqlserver") | nindent 4 }}
+type: Opaque
+data:
+  {{ .Values.sqlserver.auth.existingSecretKey }}: {{ .Values.sqlserver.auth.saPassword | b64enc }}
+---
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "snapcd-server.labels" (dict "ctx" $ "component" "sqlserver") | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "snapcd-server.selectorLabels" (dict "ctx" $ "component" "sqlserver") | nindent 4 }}
+  ports:
+    - name: tds
+      port: 1433
+      targetPort: tds
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "snapcd-server.labels" (dict "ctx" $ "component" "sqlserver") | nindent 4 }}
+spec:
+  serviceName: {{ $name }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "snapcd-server.selectorLabels" (dict "ctx" $ "component" "sqlserver") | nindent 6 }}
+  template:
+    metadata:
+      {{- if or .Values.sqlserver.podAnnotations (not .Values.sqlserver.auth.existingSecret) }}
+      annotations:
+        {{- if not .Values.sqlserver.auth.existingSecret }}
+        checksum/credentials: {{ .Values.sqlserver.auth.saPassword | sha256sum }}
+        {{- end }}
+        {{- with .Values.sqlserver.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      labels:
+        {{- include "snapcd-server.labels" (dict "ctx" $ "component" "sqlserver") | nindent 8 }}
+        {{- with .Values.sqlserver.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 30
+      {{- with .Values.sqlserver.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: mssql
+          image: {{ include "snapcd-server.image" (dict "image" .Values.sqlserver.image "defaultTag" "2022-latest") }}
+          imagePullPolicy: {{ .Values.sqlserver.image.pullPolicy }}
+          {{- with .Values.sqlserver.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: MSSQL_PID
+              value: {{ .Values.sqlserver.edition | quote }}
+            - name: SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "snapcd-server.sqlserver.secretName" . }}
+                  key: {{ .Values.sqlserver.auth.existingSecretKey }}
+          ports:
+            - name: tds
+              containerPort: 1433
+          volumeMounts:
+            - name: mssqldata
+              mountPath: /var/opt/mssql
+          {{- with .Values.sqlserver.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          readinessProbe:
+            tcpSocket:
+              port: tds
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: tds
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      {{- with .Values.sqlserver.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.sqlserver.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.sqlserver.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: mssqldata
+      spec:
+        accessModes:
+          {{- toYaml .Values.sqlserver.persistence.accessModes | nindent 10 }}
+        {{- with .Values.sqlserver.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.sqlserver.persistence.size }}
+{{- end }}

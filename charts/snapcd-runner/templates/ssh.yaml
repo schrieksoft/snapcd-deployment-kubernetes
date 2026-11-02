@@ -1,0 +1,25 @@
+{{- if and .Values.ssh.privateKey (not .Values.ssh.existingSecret) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "snapcd-runner.sshKeySecretName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "snapcd-runner.labels" (dict "ctx" $ "component" "runner") | nindent 4 }}
+type: Opaque
+data:
+  {{ .Values.ssh.existingSecretKey }}: {{ .Values.ssh.privateKey | b64enc }}
+---
+{{- end }}
+{{- if and .Values.ssh.knownHosts (not .Values.ssh.existingKnownHostsConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "snapcd-runner.knownHostsConfigMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "snapcd-runner.labels" (dict "ctx" $ "component" "runner") | nindent 4 }}
+data:
+  {{ .Values.ssh.existingKnownHostsConfigMapKey }}: |
+    {{- .Values.ssh.knownHosts | nindent 4 }}
+{{- end }}

@@ -7,3 +7,10 @@
 # AI assistant scratch directories
 .claude/
 .cursor/
+
+# Packaged dependencies of the umbrella chart, from helm dependency update
+charts/snapcd/charts/
+charts/snapcd/Chart.lock
+
+# Claude credential for the Agent on the local kind cluster
+kind/agent.env

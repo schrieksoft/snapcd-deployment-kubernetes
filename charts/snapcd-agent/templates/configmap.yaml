@@ -1,0 +1,12 @@
+{{- if not .Values.config.existingConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "snapcd-agent.configMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "snapcd-agent.labels" (dict "ctx" $ "component" "agent") | nindent 4 }}
+data:
+  appsettings.json: |
+    {{- include "snapcd-agent.appsettings" . | nindent 4 }}
+{{- end }}

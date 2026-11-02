@@ -1,0 +1,24 @@
+Snap CD Server {{ .Chart.AppVersion }} is installed as {{ include "snapcd-server.fullname" . }} in namespace {{ .Release.Namespace }}.
+
+{{- $exposed := include "snapcd-server.exposedHost" . }}
+{{- if $exposed }}
+
+The dashboard is at {{ $exposed }}
+{{- else }}
+
+Reach the dashboard with a port-forward:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "snapcd-server.fullname" . }} 5000:{{ .Values.service.port }}
+
+and open the URL set in Server.Host.
+{{- end }}
+
+Runners and Agents in this cluster reach the Server at:
+
+  http://{{ include "snapcd-server.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
+
+To register a Runner, create a service principal for it in the dashboard and install the snapcd-runner chart with its client id and secret.
+{{- if .Values.sqlserver.enabled }}
+
+The bundled SQL Server is meant for trials. Use database.* to point the Server at a managed database for anything else.
+{{- end }}

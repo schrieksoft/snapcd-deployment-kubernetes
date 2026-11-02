@@ -1,0 +1,77 @@
+name: Charts
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+env:
+  HELM_VERSION: v3.16.4
+  HELM_UNITTEST_VERSION: v0.7.1
+  KUBECONFORM_VERSION: v0.6.7
+  HELM_DOCS_VERSION: 1.14.2
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Install tools
+        run: |
+          helm plugin install https://github.com/helm-unittest/helm-unittest --version "${HELM_UNITTEST_VERSION}"
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP/bin" kubeconform
+          curl -sSL "https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP/bin" helm-docs
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Build the umbrella chart's dependencies
+        run: helm dependency update charts/snapcd
+
+      - name: Lint
+        run: |
+          for chart in charts/*/; do
+            for values in "$chart"ci/*-values.yaml; do
+              echo "--- helm lint $chart with $values"
+              helm lint --strict "$chart" --values "$values"
+            done
+          done
+
+      # The Gateway API kinds are not in the built-in schemas, so the CRDs catalog supplies them.
+      - name: Validate rendered manifests
+        run: |
+          for chart in charts/*/; do
+            for values in "$chart"ci/*-values.yaml; do
+              echo "--- $chart with $values"
+              helm template ci "$chart" --namespace ci --values "$values" \
+                | kubeconform -strict -summary \
+                    -schema-location default \
+                    -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+            done
+          done
+          for component in components/*/; do
+            echo "--- kustomize $component"
+            kubectl kustomize "$component" | kubeconform -strict -summary
+          done
+
+      - name: Unit tests
+        run: helm unittest charts/snapcd-*
+
+      - name: Chart READMEs are current
+        run: |
+          helm-docs --chart-search-root charts
+          git diff --exit-code -- charts
+
+      - name: Kustomize manifests are current
+        run: scripts/render-kustomize.sh --check
+
+      - name: Chart defaults match the Kustomize config
+        run: scripts/check-chart-defaults.sh

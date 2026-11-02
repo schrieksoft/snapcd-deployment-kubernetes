@@ -1,0 +1,25 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.appVersionBadge" . }}
+
+{{ template "chart.description" . }}
+
+## Installing
+
+```bash
+helm install snapcd-runner oci://ghcr.io/schrieksoft/charts/snapcd-runner --namespace snapcd-runner --create-namespace
+```
+
+The defaults are the reference deployment's sample settings, the same as the Docker deployment: the Runner connects as the pre-seeded `default` service principal to a Server installed as `snapcd-server` in the `snapcd-server` namespace. Every credential in them is public. For a Runner of your own, set `config.appsettings.Runner` (its id, organization and client id), `config.appsettings.Server.Url`, and `credentials`.
+
+The Runner clones over SSH with `ssh.privateKey` (or `ssh.existingSecret`) and `ssh.knownHosts`. The key is staged into the pod at 0600 by an init container running as the Runner's own user, and `GIT_SSH_COMMAND` points `git` at it.
+
+More than one replica needs `allow_multiple_instances` on the Runner record. Each pod connects under its own pod name.
+
+Cloud credentials come from `workloadIdentity` (Azure, AWS or GCP), which annotates the ServiceAccount and labels the pod.
+
+{{ template "chart.homepageLine" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.valuesSection" . }}

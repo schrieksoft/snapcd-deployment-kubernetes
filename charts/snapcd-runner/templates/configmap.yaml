@@ -1,0 +1,12 @@
+{{- if not .Values.config.existingConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "snapcd-runner.configMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "snapcd-runner.labels" (dict "ctx" $ "component" "runner") | nindent 4 }}
+data:
+  appsettings.json: |
+    {{- toPrettyJson .Values.config.appsettings | nindent 4 }}
+{{- end }}

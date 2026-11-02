@@ -1,0 +1,12 @@
+Snap CD Agent {{ .Chart.AppVersion }} is installed as {{ include "snapcd-agent.fullname" . }} in namespace {{ .Release.Namespace }}.
+{{- with .Values.config.appsettings }}{{ with .Server }}
+
+It connects to the Server at {{ .Url }}.
+{{- end }}{{ end }}
+{{- if .Values.sidecar.enabled }}
+
+The Claude sidecar runs as {{ include "snapcd-agent.sidecar.fullname" . }}. A healthy sidecar does not prove the credential is right: it is only used when a mission calls for inference.
+{{- else }}
+
+The Claude sidecar is disabled, so the Agent has no inference provider.
+{{- end }}

@@ -1,0 +1,356 @@
+image:
+  # -- Image registry. Set to a mirror (Artifactory, Harbor, ACR) to pull through it.
+  registry: ghcr.io
+  # -- Image repository.
+  repository: schrieksoft/snapcd/snapcd-server
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image digest. Takes precedence over the tag when set.
+  digest: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Pull secrets for every workload in the chart.
+imagePullSecrets: []
+
+# -- Overrides the chart name in resource names.
+nameOverride: ""
+# -- Overrides the full resource name of the Server.
+fullnameOverride: ""
+
+# -- Labels added to every resource.
+commonLabels: {}
+
+# -- Value of `ASPNETCORE_ENVIRONMENT`.
+aspnetcoreEnvironment: Production
+
+config:
+  # -- Name of an existing Secret holding `appsettings.json`. When set, `config.appsettings` is ignored and the chart derives nothing into it.
+  existingSecret: ""
+  # -- Key of `appsettings.json` in `config.existingSecret`.
+  existingSecretKey: appsettings.json
+  # -- The Server's `appsettings.json` as a map, rendered into a Secret. The chart fills `ConnectionString`, the SQL Server transport connection string and `Caching` from the bundled SQL Server and Redis when those are enabled and the keys are absent, and `Server.Host` from the ingress or HTTPRoute host, or `http://localhost:<service.port>` for a port-forward. The defaults are the reference deployment's sample settings, the same as `components/server/config/appsettings.json` and the Docker deployment: they work as installed, and every key, password and pre-seeded credential in them is public, so replace them before the Server holds anything that matters. See the Snap CD server settings reference for every key.
+  # @default -- the reference deployment's sample settings
+  appsettings:
+    AllowHttp: true
+    Turnstile:
+      IsEnabled: false
+    Caching:
+      Provider: Redis
+    Logging:
+      DefaultLogLevel: Information
+    BackgroundJobs:
+      SourceRefresh:
+        Cron: '*/9 * * * *'
+    ServiceBus:
+      BusType: SqlServer
+      SagaConcurrencyLimit: 20
+      TransportOptions:
+        SqlServer:
+          Schema: transport
+    InvitationSettings:
+      ExpirationDays: 30
+      AutoDeleteIncompleteUsers: true
+      RequireEmailVerification: false
+    EmailSender:
+      EmailProvider: NoOp
+    OpenIdConnect:
+      TokenEncryption:
+        SymmetricKey: |-
+          -----BEGIN SYMMETRIC KEY-----
+          0wwsxvf4MgL3RySlmhvGqkCYslI1YYu4mu1hwr5upJs=
+          -----END SYMMETRIC KEY-----
+      TokenSigning:
+        RsaPrivateKey: |
+          -----BEGIN RSA PRIVATE KEY-----
+          MIIEpAIBAAKCAQEA1EOpb2D7iRh6xO3UC2bCzpM/C4ksn6EeyPY3o7G2Vulxx4Jl
+          gVRrMxEudks4Lo1CWiXdBBaGJxFTVH6i0LRAGw2wWZO9QM000pnDV1COkTo5WJDV
+          y9DobREbq2953ONUeuTtpg7GiBhGzVbzfFRpl+I/LcUv69OYGEhe26UsSs7TA0qh
+          dvm38nfYq4Ticc20m12vqvLh7rEGuZWWtW5Lsbbn7io9kkI7sxs8Q6UkCn6kAtNS
+          cQ/Liqrf5JHWNbv8oZlMloCTn6C7JLdaDgoK8p7htSd8Flan2elS9ucSW0+YI9XY
+          rEf3YVk9LYhOwEWA2dB36UZfxLg+UWtjy5pSOwIDAQABAoIBABuDlb/hM1mm+arz
+          JQxBSrkaLw7gvg8HBIWKHNY0H+2OHvh8d4nXFnotHPeqcmLeXp5u0AJKpSMFRObr
+          71DcPH8FPDmwQ9TVhKZT1hVIVOKQSISpaX0c3DPfBtYnAgXW1cmESSXAPo2/j9Xo
+          EnGoQ3OzmPrm13pbGBj1sI4KD/62KgcXDgVCDkSZWziWLzXFJYOP8YKFk0xHXgfS
+          5CQ0HVD4xot0ngnwtlg1hjvDyxCWBmDBD2+ivn2w1v1IWpAUq5yZnIisArJCKkV7
+          AmLWS7nSLs7Z9nI8D0V43mjab8nEQijikQ4e2djMz/fPfzyYrcuXiCk0JFV3whyz
+          5NbRrxECgYEA6hyCucWvcc+C6RhxkdF862zVKNyuCRUzhXh54rdbKONoQL6K0tjO
+          4e7TRuRCVFsFXtSXLuzn0nKAVr37qdA2QRddZvYXQwgDZEQAMzjy9JSVptxHq4wO
+          Y3g40FaIFrcFVNQZR+xw+HZQFrRSJtz0OuRrvncsh3LGeXi4FYF84xMCgYEA6Bw9
+          EWus1Len8gRnAcsgj4qks3PMyw1NlJC6bVow3SkSfL+aypF37DJmUlTeMMziFQfr
+          bjNrBTnRQRfmfSVyk2Q5/pH1y3nnwf1V6KrwvPt3S6GsVZyuBN7OrejCxaIPBN3c
+          /i4rEw8eOM6hnfxVFrK5YdHsHQpewEg7MzTakTkCgYEA1M9x7dlLsJNHlwhHRJw/
+          h+p4ohpogY0qNmvbsEGotjRx8ljC7QN0nGBy4gBgYzoSWa+6dkeYO+8lxrQQbr78
+          cpMArrWJU7+XBa/i1q0v/TCMERAwfjpkYftI+emO78cTK5daG81MrC8wglMMUpOL
+          13UIlCzU55Nn48fe3n3Evs0CgYAzgMCUMv5AnRfo/c0VessYzrzJDPLuQ19pjcuw
+          JAkfqdNuVt20AR9JC83kiuxai7vGyuEUrNgcar3h4bnFHyATUHQF5sFRixU/2ETN
+          wdB1Pp8z6wXgYUnDzuSxdipxzAnlHI3C4N+x9PLRzBfUhH8k8DduWzQ3JWvs4pow
+          PJQbEQKBgQCWzxmDrLVjXlI8rPvp8Px2RsySvayBv58O7NDpUbrx4B7KVtggA7dy
+          WZt0Bh86XBOEopE5XisgJZk4L0TgsEjwDCekhEGWzEuIZV4USTtrJdbr9yrI5u4w
+          YvlAUpX21G9UWmrzFEpJU8aKXCS4dYlAAnRX+G9qre6xfuhZVuZGyQ==
+          -----END RSA PRIVATE KEY-----
+        RsaPublicKey: |
+          -----BEGIN PUBLIC KEY-----
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1EOpb2D7iRh6xO3UC2bC
+          zpM/C4ksn6EeyPY3o7G2Vulxx4JlgVRrMxEudks4Lo1CWiXdBBaGJxFTVH6i0LRA
+          Gw2wWZO9QM000pnDV1COkTo5WJDVy9DobREbq2953ONUeuTtpg7GiBhGzVbzfFRp
+          l+I/LcUv69OYGEhe26UsSs7TA0qhdvm38nfYq4Ticc20m12vqvLh7rEGuZWWtW5L
+          sbbn7io9kkI7sxs8Q6UkCn6kAtNScQ/Liqrf5JHWNbv8oZlMloCTn6C7JLdaDgoK
+          8p7htSd8Flan2elS9ucSW0+YI9XYrEf3YVk9LYhOwEWA2dB36UZfxLg+UWtjy5pS
+          OwIDAQAB
+          -----END PUBLIC KEY-----
+      ExternalLoginProviders: {}
+    StateStore:
+      EncryptionKey: lENnx3w/N6aQqhAdAonujUOn14Odel59vJ5orppkmfo=
+    SecretStore:
+      Provider: SqlServer
+      SqlServer:
+        SymmetricKey: Zjg2NTkzOWYwNWM0NDU1OGE5YjY4OWM3ZGI4MDJmNTE=
+    ProductionDataSeeder:
+      Preseeded:
+        Enabled: true
+        User:
+          Email: admin@preseeded.io
+          Password: Admin#123
+
+database:
+  # -- Connection string to an external SQL Server database, merged into `appsettings.json` as `ConnectionString` and the SQL Server transport connection string.
+  connectionString: ""
+  # -- Name of an existing Secret holding the connection string. Injected as environment variables, so it works with `config.existingSecret` too.
+  existingSecret: ""
+  # -- Key of the connection string in `database.existingSecret`.
+  existingSecretKey: connection-string
+
+cache:
+  # -- Connection string to an external Redis, merged into `appsettings.json` as `Caching.ConnectionString`.
+  connectionString: ""
+  # -- Name of an existing Secret holding the Redis connection string. Injected as an environment variable.
+  existingSecret: ""
+  # -- Key of the connection string in `cache.existingSecret`.
+  existingSecretKey: connection-string
+
+serviceAccount:
+  # -- Create a ServiceAccount for the Server.
+  create: true
+  # -- ServiceAccount name. Defaults to the full name when `create` is true, and to `default` otherwise.
+  name: ""
+  # -- ServiceAccount annotations, for example `azure.workload.identity/client-id`.
+  annotations: {}
+  # -- Mount the ServiceAccount token into the pod.
+  automount: true
+
+# -- Pod annotations.
+podAnnotations: {}
+# -- Pod labels, for example `azure.workload.identity/use: "true"`.
+podLabels: {}
+# -- Pod security context.
+podSecurityContext: {}
+# -- Container security context.
+securityContext: {}
+
+# -- Container resources.
+resources:
+  requests:
+    memory: 512Mi
+    cpu: 250m
+  limits:
+    memory: 2Gi
+    cpu: 2000m
+
+# -- Deployment strategy. `Recreate`, because the Server runs as a single replica.
+strategy:
+  type: Recreate
+
+# -- Readiness probe.
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  failureThreshold: 6
+
+# -- Liveness probe.
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 60
+  periodSeconds: 30
+
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}
+# -- Topology spread constraints.
+topologySpreadConstraints: []
+# -- Priority class name.
+priorityClassName: ""
+
+# -- Extra environment variables for the Server container.
+extraEnv: []
+# -- Extra `envFrom` sources for the Server container.
+extraEnvFrom: []
+# -- Extra volumes for the Server pod.
+extraVolumes: []
+# -- Extra volume mounts for the Server container.
+extraVolumeMounts: []
+# -- Init containers for the Server pod.
+initContainers: []
+# -- Extra containers (sidecars) for the Server pod.
+extraContainers: []
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port.
+  port: 5000
+  # -- Service annotations.
+  annotations: {}
+
+ingress:
+  # -- Create an Ingress for the Server.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations.
+  annotations: {}
+  # -- Host the Server is reached on. Sets `Server.Host` when that is absent, and must agree with it when present.
+  host: ""
+  # -- Path.
+  path: /
+  # -- Path type.
+  pathType: Prefix
+  # -- TLS entries. Any entry makes `Server.Host` an `https` URL.
+  tls: []
+  # -- Port clients reach the ingress on, when it is not the scheme's default. Appended to the derived `Server.Host`.
+  publicPort: ""
+  #  - secretName: snapcd-server-tls
+  #    hosts:
+  #      - snapcd.example.com
+
+httpRoute:
+  # -- Create a Gateway API HTTPRoute for the Server.
+  enabled: false
+  # -- HTTPRoute annotations.
+  annotations: {}
+  # -- Gateways the route attaches to.
+  parentRefs: []
+  #  - name: public
+  #    namespace: istio-ingress
+  # -- Hostnames. The first one sets `Server.Host` when that is absent, and must agree with it when present.
+  hostnames: []
+  # -- Scheme the Gateway serves the hostnames on, used to build `Server.Host`.
+  scheme: https
+  # -- Port clients reach the Gateway on, when it is not the scheme's default. Appended to the derived `Server.Host`.
+  publicPort: ""
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget. With a single replica, `minAvailable: 1` blocks every node drain.
+  enabled: false
+  # -- Minimum available pods.
+  minAvailable: ""
+  # -- Maximum unavailable pods.
+  maxUnavailable: 1
+
+sqlserver:
+  # -- Deploy a bundled SQL Server. For trials; use `database.*` for a managed database.
+  enabled: true
+  # -- Overrides the full resource name of the SQL Server.
+  fullnameOverride: ""
+  image:
+    # -- SQL Server image registry.
+    registry: mcr.microsoft.com
+    # -- SQL Server image repository.
+    repository: mssql/server
+    # -- SQL Server image tag.
+    tag: 2022-latest
+    # -- SQL Server image digest.
+    digest: ""
+    # -- SQL Server image pull policy.
+    pullPolicy: IfNotPresent
+  # -- Value of `MSSQL_PID`.
+  edition: Developer
+  auth:
+    # -- `sa` password. The default is the reference deployment's public sample password.
+    saPassword: myPassw0rd
+    # -- Name of an existing Secret holding the `sa` password.
+    existingSecret: ""
+    # -- Key of the password in `sqlserver.auth.existingSecret`.
+    existingSecretKey: SA_PASSWORD
+  # -- Database name used in the derived connection string.
+  database: SnapCd
+  persistence:
+    # -- Volume size.
+    size: 20Gi
+    # -- Storage class. Empty uses the cluster default.
+    storageClass: ""
+    # -- Access modes.
+    accessModes:
+      - ReadWriteOnce
+  # -- SQL Server resources.
+  resources:
+    requests:
+      memory: 2Gi
+      cpu: 500m
+    limits:
+      memory: 4Gi
+      cpu: 2000m
+  # -- SQL Server pod annotations.
+  podAnnotations: {}
+  # -- SQL Server pod labels.
+  podLabels: {}
+  # -- SQL Server pod security context.
+  podSecurityContext: {}
+  # -- SQL Server container security context.
+  securityContext: {}
+  # -- SQL Server node selector.
+  nodeSelector: {}
+  # -- SQL Server tolerations.
+  tolerations: []
+  # -- SQL Server affinity.
+  affinity: {}
+
+redis:
+  # -- Deploy a bundled Redis. For trials; use `cache.*` for a managed cache.
+  enabled: true
+  # -- Overrides the full resource name of Redis.
+  fullnameOverride: ""
+  image:
+    # -- Redis image registry. Empty pulls from Docker Hub.
+    registry: ""
+    # -- Redis image repository.
+    repository: redis
+    # -- Redis image tag.
+    tag: 7-alpine
+    # -- Redis image digest.
+    digest: ""
+    # -- Redis image pull policy.
+    pullPolicy: IfNotPresent
+  # -- Redis resources.
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 50m
+    limits:
+      memory: 256Mi
+      cpu: 500m
+  # -- Redis pod annotations.
+  podAnnotations: {}
+  # -- Redis pod labels.
+  podLabels: {}
+  # -- Redis pod security context.
+  podSecurityContext: {}
+  # -- Redis container security context.
+  securityContext: {}
+  # -- Redis node selector.
+  nodeSelector: {}
+  # -- Redis tolerations.
+  tolerations: []
+  # -- Redis affinity.
+  affinity: {}
+
+# -- Extra manifests, rendered through `tpl`.
+extraManifests: []

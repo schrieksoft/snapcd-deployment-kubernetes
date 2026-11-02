@@ -1,0 +1,14 @@
+# Values for rendering components/runner/generated.yaml with scripts/render-kustomize.sh.
+# Names, ConfigMaps and Secrets match what kustomization.yaml generates from config/.
+fullnameOverride: snapcd-runner
+config:
+  existingConfigMap: snapcd-runner-config
+credentials:
+  existingSecret: snapcd-runner-credentials
+ssh:
+  existingSecret: snapcd-runner-ssh-key
+  existingKnownHostsConfigMap: snapcd-runner-ssh
+preapprovedHooks:
+  existingConfigMap: snapcd-runner-hooks
+serviceAccount:
+  create: false
