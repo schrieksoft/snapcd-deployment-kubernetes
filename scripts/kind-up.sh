@@ -54,5 +54,10 @@ helm upgrade --install snapcd-server charts/snapcd-server \
     --set-string "ingress.publicPort=${HTTP_PORT}" \
     --wait --timeout 10m
 
+echo "Installing the Runner"
+helm upgrade --install snapcd-runner charts/snapcd-runner \
+    --namespace snapcd-runner --create-namespace \
+    --wait --timeout 5m
+
 echo
 echo "Snap CD is up at http://snapcd.localhost:${HTTP_PORT}"

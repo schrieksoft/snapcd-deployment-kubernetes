@@ -1,0 +1,14 @@
+{{- if and .Values.preapprovedHooks.hooks (not .Values.preapprovedHooks.existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "snapcd-runner.hooksConfigMapName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "snapcd-runner.labels" (dict "ctx" $ "component" "runner") | nindent 4 }}
+data:
+  {{- range $name, $content := .Values.preapprovedHooks.hooks }}
+  {{ $name }}: |
+    {{- $content | nindent 4 }}
+  {{- end }}
+{{- end }}

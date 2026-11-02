@@ -1,0 +1,135 @@
+suite: statefulset
+templates:
+  - statefulset.yaml
+release:
+  name: snapcd-runner
+  namespace: snapcd-runner
+tests:
+  - it: names each pod's connection after the pod
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: Runner__Instance
+            value: $(POD_NAME)
+
+  - it: stages the SSH key and points git at it
+    set:
+      ssh.privateKey: key
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: stage-ssh
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GIT_SSH_COMMAND
+            value: ssh -i /run/snapcd/ssh/id_rsa -o UserKnownHostsFile=/run/snapcd/ssh/known_hosts
+
+  - it: stages only known_hosts when there is no key
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GIT_SSH_COMMAND
+            value: ssh -o UserKnownHostsFile=/run/snapcd/ssh/known_hosts
+
+  - it: has no staging and no GIT_SSH_COMMAND without key or known_hosts
+    set:
+      ssh.knownHosts: ""
+    asserts:
+      - notExists:
+          path: spec.template.spec.initContainers
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GIT_SSH_COMMAND
+          any: true
+
+  - it: mounts the hooks where the settings say
+    set:
+      config.appsettings.HooksPreapproval.PreapprovedHooksDirectory: /hooks
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: preapproved-hooks
+            mountPath: /hooks
+            readOnly: true
+
+  - it: keeps the claim template name stable, since renaming it orphans the working directory
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.name
+          value: runner-data
+
+  - it: uses an emptyDir when persistence is off
+    set:
+      persistence.enabled: false
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: runner-data
+            emptyDir: {}
+
+  - it: labels the pod for Azure workload identity
+    set:
+      workloadIdentity.azure.clientId: abc
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["azure.workload.identity/use"]
+          value: "true"
+
+  - it: scales to the replica count
+    set:
+      replicaCount: 3
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
+
+  - it: uses the image's engines by default
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: engines
+          any: true
+
+  - it: downloads and mounts only the engines asked for
+    set:
+      engines.download:
+        enabled: true
+        tofuVersion: 1.8.8
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: download-engines
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].command[2]
+          pattern: 'tofu_1\.8\.8_SHA256SUMS" \| sha256sum -c -'
+      - notMatchRegex:
+          path: spec.template.spec.initContainers[0].command[2]
+          pattern: terraform
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: engines
+            mountPath: /usr/local/bin/tofu
+            subPath: tofu
+      - notContains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: engines
+            mountPath: /usr/local/bin/terraform
+            subPath: terraform
+
+  - it: fails when the download is enabled with no version
+    set:
+      engines.download.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: 'engines.download.enabled needs'

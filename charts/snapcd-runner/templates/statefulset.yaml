@@ -1,0 +1,283 @@
+{{- $sshDir := "/run/snapcd/ssh" }}
+{{- $hasKey := include "snapcd-runner.hasSshKey" . }}
+{{- $hasKnownHosts := include "snapcd-runner.hasKnownHosts" . }}
+{{- $download := .Values.engines.download }}
+{{- $tofu := and $download.enabled $download.tofuVersion }}
+{{- $terraform := and $download.enabled $download.terraformVersion }}
+{{- if and $download.enabled (not (or $tofu $terraform)) }}
+{{- fail "engines.download.enabled needs engines.download.tofuVersion, engines.download.terraformVersion, or both." }}
+{{- end }}
+{{- $hooksDir := dig "HooksPreapproval" "PreapprovedHooksDirectory" "/app/preapproved-hooks" .Values.config.appsettings }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "snapcd-runner.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "snapcd-runner.labels" (dict "ctx" $ "component" "runner") | nindent 4 }}
+spec:
+  serviceName: {{ include "snapcd-runner.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  podManagementPolicy: {{ .Values.podManagementPolicy }}
+  {{- with .Values.updateStrategy }}
+  updateStrategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "snapcd-runner.selectorLabels" (dict "ctx" $ "component" "runner") | nindent 6 }}
+  template:
+    metadata:
+      {{- if or .Values.podAnnotations (not .Values.config.existingConfigMap) }}
+      annotations:
+        {{- if not .Values.config.existingConfigMap }}
+        checksum/config: {{ toJson .Values.config.appsettings | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      labels:
+        {{- include "snapcd-runner.labels" (dict "ctx" $ "component" "runner") | nindent 8 }}
+        {{- if .Values.workloadIdentity.azure.clientId }}
+        azure.workload.identity/use: "true"
+        {{- end }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "snapcd-runner.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if or $hasKey $hasKnownHosts $tofu $terraform .Values.initContainers }}
+      initContainers:
+        {{- if or $tofu $terraform }}
+        - name: download-engines
+          image: {{ include "snapcd-runner.image" (dict "image" $download.image "defaultTag" "3.20") }}
+          imagePullPolicy: {{ $download.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              cd /tmp
+              {{- if $tofu }}
+              wget -q "https://github.com/opentofu/opentofu/releases/download/v{{ $tofu }}/tofu_{{ $tofu }}_linux_amd64.zip"
+              wget -q "https://github.com/opentofu/opentofu/releases/download/v{{ $tofu }}/tofu_{{ $tofu }}_SHA256SUMS"
+              grep " tofu_{{ $tofu }}_linux_amd64.zip$" "tofu_{{ $tofu }}_SHA256SUMS" | sha256sum -c -
+              unzip -o -q "tofu_{{ $tofu }}_linux_amd64.zip" tofu -d /engines
+              {{- end }}
+              {{- if $terraform }}
+              wget -q "https://releases.hashicorp.com/terraform/{{ $terraform }}/terraform_{{ $terraform }}_linux_amd64.zip"
+              wget -q "https://releases.hashicorp.com/terraform/{{ $terraform }}/terraform_{{ $terraform }}_SHA256SUMS"
+              grep " terraform_{{ $terraform }}_linux_amd64.zip$" "terraform_{{ $terraform }}_SHA256SUMS" | sha256sum -c -
+              unzip -o -q "terraform_{{ $terraform }}_linux_amd64.zip" terraform -d /engines
+              {{- end }}
+              chmod +x /engines/*
+          volumeMounts:
+            - name: engines
+              mountPath: /engines
+        {{- end }}
+        {{- if or $hasKey $hasKnownHosts }}
+        {{- /* Copies the key as the Runner's own user: OpenSSH refuses a key that is not 0600, and a Secret mount cannot be owned by an arbitrary UID. */}}
+        - name: stage-ssh
+          image: {{ include "snapcd-runner.image" (dict "image" .Values.image "defaultTag" .Chart.AppVersion) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              if [ -f /run/secrets/ssh/id_rsa ]; then
+                cp /run/secrets/ssh/id_rsa {{ $sshDir }}/id_rsa
+                chmod 600 {{ $sshDir }}/id_rsa
+              fi
+              if [ -f /run/secrets/ssh/known_hosts ]; then
+                cp /run/secrets/ssh/known_hosts {{ $sshDir }}/known_hosts
+                chmod 644 {{ $sshDir }}/known_hosts
+              fi
+          volumeMounts:
+            - name: ssh
+              mountPath: {{ $sshDir }}
+            {{- if $hasKey }}
+            - name: ssh-key
+              mountPath: /run/secrets/ssh/id_rsa
+              subPath: id_rsa
+              readOnly: true
+            {{- end }}
+            {{- if $hasKnownHosts }}
+            - name: ssh-known-hosts
+              mountPath: /run/secrets/ssh/known_hosts
+              subPath: known_hosts
+              readOnly: true
+            {{- end }}
+        {{- end }}
+        {{- with .Values.initContainers }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: snapcd-runner
+          image: {{ include "snapcd-runner.image" (dict "image" .Values.image "defaultTag" .Chart.AppVersion) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: ASPNETCORE_URLS
+              value: "http://0.0.0.0:5001"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: Runner__Instance
+              value: "$(POD_NAME)"
+            - name: Runner__Credentials__ClientSecret
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "snapcd-runner.credentialsSecretName" . }}
+                  key: {{ .Values.credentials.existingSecretKey }}
+            {{- if or $hasKey $hasKnownHosts }}
+            - name: GIT_SSH_COMMAND
+              value: "ssh{{ if $hasKey }} -i {{ $sshDir }}/id_rsa{{ end }}{{ if $hasKnownHosts }} -o UserKnownHostsFile={{ $sshDir }}/known_hosts{{ end }}"
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- tpl (toYaml .) $ | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 5001
+          volumeMounts:
+            - name: config
+              mountPath: /app/appsettings.json
+              subPath: appsettings.json
+            - name: runner-data
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- if or $hasKey $hasKnownHosts }}
+            - name: ssh
+              mountPath: {{ $sshDir }}
+              readOnly: true
+            {{- end }}
+            {{- if $tofu }}
+            - name: engines
+              mountPath: /usr/local/bin/tofu
+              subPath: tofu
+            {{- end }}
+            {{- if $terraform }}
+            - name: engines
+              mountPath: /usr/local/bin/terraform
+              subPath: terraform
+            {{- end }}
+            {{- if include "snapcd-runner.hasHooks" . }}
+            - name: preapproved-hooks
+              mountPath: {{ $hooksDir }}
+              readOnly: true
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- with .Values.extraContainers }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "snapcd-runner.configMapName" . }}
+            items:
+              - key: {{ ternary .Values.config.existingConfigMapKey "appsettings.json" (not (empty .Values.config.existingConfigMap)) }}
+                path: appsettings.json
+        {{- if or $hasKey $hasKnownHosts }}
+        - name: ssh
+          emptyDir:
+            medium: Memory
+        {{- end }}
+        {{- if $hasKey }}
+        - name: ssh-key
+          secret:
+            secretName: {{ include "snapcd-runner.sshKeySecretName" . }}
+            items:
+              - key: {{ .Values.ssh.existingSecretKey }}
+                path: id_rsa
+        {{- end }}
+        {{- if $hasKnownHosts }}
+        - name: ssh-known-hosts
+          configMap:
+            name: {{ include "snapcd-runner.knownHostsConfigMapName" . }}
+            items:
+              - key: {{ .Values.ssh.existingKnownHostsConfigMapKey }}
+                path: known_hosts
+        {{- end }}
+        {{- if include "snapcd-runner.hasHooks" . }}
+        - name: preapproved-hooks
+          configMap:
+            name: {{ include "snapcd-runner.hooksConfigMapName" . }}
+            defaultMode: 0755
+        {{- end }}
+        {{- if or $tofu $terraform }}
+        - name: engines
+          emptyDir: {}
+        {{- end }}
+        {{- if not .Values.persistence.enabled }}
+        - name: runner-data
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- tpl (toYaml .) $ | nindent 8 }}
+      {{- end }}
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: runner-data
+      spec:
+        accessModes:
+          {{- toYaml .Values.persistence.accessModes | nindent 10 }}
+        {{- with .Values.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- end }}

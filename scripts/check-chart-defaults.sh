@@ -32,3 +32,25 @@ if values["sqlserver"]["auth"]["saPassword"] != env["SA_PASSWORD"]:
     failed = True
 sys.exit(1 if failed else 0)
 '
+
+helm show values charts/snapcd-runner | python3 -c '
+import json, os, sys, yaml
+
+values = yaml.safe_load(sys.stdin)
+config = "components/runner/config"
+env = dict(line.split("=", 1) for line in open(f"{config}/runner-secret.env").read().splitlines() if "=" in line)
+hooks = {name: open(f"{config}/preapproved-hooks/{name}").read() for name in os.listdir(f"{config}/preapproved-hooks")}
+
+checks = [
+    (values["config"]["appsettings"] == json.load(open(f"{config}/appsettings.json")), "config.appsettings", "appsettings.json"),
+    (values["credentials"]["clientSecret"] == env["Runner__Credentials__ClientSecret"], "credentials.clientSecret", "runner-secret.env"),
+    (values["ssh"]["knownHosts"] == open(f"{config}/known_hosts").read(), "ssh.knownHosts", "known_hosts"),
+    (values["preapprovedHooks"]["hooks"] == hooks, "preapprovedHooks.hooks", "preapproved-hooks/"),
+]
+failed = False
+for ok, value, source in checks:
+    if not ok:
+        print(f"charts/snapcd-runner {value} differs from {config}/{source}", file=sys.stderr)
+        failed = True
+sys.exit(1 if failed else 0)
+'

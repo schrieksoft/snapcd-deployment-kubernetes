@@ -5,7 +5,7 @@ namespace: snapcd-runner
 
 resources:
   - namespace.yaml
-  - runner.yaml
+  - generated.yaml
 
 configMapGenerator:
   - name: snapcd-runner-config

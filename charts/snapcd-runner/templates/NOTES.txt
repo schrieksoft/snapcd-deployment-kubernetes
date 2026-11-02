@@ -1,0 +1,18 @@
+Snap CD Runner {{ .Chart.AppVersion }} is installed as {{ include "snapcd-runner.fullname" . }} in namespace {{ .Release.Namespace }}, with {{ .Values.replicaCount }} pod(s).
+
+{{- with .Values.config.appsettings }}
+{{- with .Server }}
+
+It connects to the Server at {{ .Url }}.
+{{- end }}
+{{- end }}
+
+Check that it registered:
+
+  kubectl -n {{ .Release.Namespace }} logs statefulset/{{ include "snapcd-runner.fullname" . }}
+
+and look for the Runner as connected in the Server's dashboard.
+{{- if gt (int .Values.replicaCount) 1 }}
+
+More than one pod needs allow_multiple_instances on the Runner record.
+{{- end }}

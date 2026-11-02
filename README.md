@@ -31,7 +31,8 @@ snapcd-deployment-kubernetes/
 │   ├── runner/                     # namespace: snapcd-runner
 │   │   ├── kustomization.yaml
 │   │   ├── namespace.yaml
-│   │   ├── runner.yaml             # StatefulSet (init-container downloads engines)
+│   │   ├── generated.yaml          # StatefulSet, rendered from charts/snapcd-runner
+│   │   ├── kustomize-values.yaml   # Chart values the render uses
 │   │   └── config/
 │   │       ├── appsettings.json    # ConfigMap (no secrets — ClientId only)
 │   │       ├── runner-secret.env   # Runner__Credentials__ClientSecret
@@ -169,11 +170,18 @@ Drop approved hook scripts into `components/runner/config/preapproved-hooks/` an
 
 #### Multiple replicas
 
-Bump `spec.replicas` in `components/runner/runner.yaml`. Each replica gets its own PVC and a unique instance name (`snapcd-runner-0`, `snapcd-runner-1`, …) — the runner's `Runner__Instance` env var is set from the pod name.
+Set `replicaCount` in `components/runner/kustomize-values.yaml` and run `scripts/render-kustomize.sh`, or patch `spec.replicas` in `components/runner/kustomization.yaml`. Each replica gets its own PVC and connects under its pod name (`snapcd-runner-0`, `snapcd-runner-1`, and so on), since `Runner__Instance` is set from the pod name. The Runner record needs `allow_multiple_instances` for more than one to connect.
 
 #### Engine versions
 
-The init container in `runner.yaml` downloads `tofu` 1.8.8 and `terraform` 1.5.7. To pin different versions, edit the `env` block at the top of the file.
+The Runner image ships OpenTofu and Terraform. To run other versions, set `engines.download` in `components/runner/kustomize-values.yaml` and run `scripts/render-kustomize.sh`: an init container then downloads the versions you name, checks them against the release's SHA256SUMS, and mounts them over the image's.
+
+```yaml
+engines:
+  download:
+    enabled: true
+    tofuVersion: 1.8.8
+```
 
 > Snap CD strives to support the latest available version of `tofu`. For `terraform` we design for binaries up to release [1.5.7](https://github.com/hashicorp/terraform/releases/tag/v1.5.7), the final release under the [Mozilla Public License 2.0](https://github.com/hashicorp/terraform/blob/v1.5.7/LICENSE).
 

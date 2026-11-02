@@ -1,0 +1,201 @@
+image:
+  # -- Image registry. Set to a mirror (Artifactory, Harbor, ACR) to pull through it.
+  registry: ghcr.io
+  # -- Image repository. `snapcd-runner` is the plain image, `snapcd-runner-azure` adds the Azure CLI and kubelogin.
+  repository: schrieksoft/snapcd/snapcd-runner-azure
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image digest. Takes precedence over the tag when set.
+  digest: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Pull secrets.
+imagePullSecrets: []
+
+# -- Overrides the chart name in resource names.
+nameOverride: ""
+# -- Overrides the full resource name.
+fullnameOverride: ""
+
+# -- Labels added to every resource.
+commonLabels: {}
+
+# -- Runner pods. More than one needs `allow_multiple_instances` on the Runner record; each pod connects under its own pod name.
+replicaCount: 1
+
+config:
+  # -- Name of an existing ConfigMap holding `appsettings.json`. When set, `config.appsettings` is ignored.
+  existingConfigMap: ""
+  # -- Key of `appsettings.json` in `config.existingConfigMap`.
+  existingConfigMapKey: appsettings.json
+  # -- The Runner's `appsettings.json` as a map, rendered into a ConfigMap. It holds no secrets: the client secret comes from `credentials`. The defaults are the reference deployment's sample settings, the same as `components/runner/config/appsettings.json` and the Docker deployment, and connect to a Server installed as `snapcd-server` in the `snapcd-server` namespace. See the Snap CD runner settings reference for every key.
+  # @default -- the reference deployment's sample settings
+  appsettings:
+    Runner:
+      Id: 10000000-0000-0000-0000-000000000000
+      Instance: myrunner
+      Credentials:
+        ClientId: default
+      OrganizationId: 10000000-0000-0000-0000-000000000000
+    Server:
+      Url: http://snapcd-server.snapcd-server.svc.cluster.local:5000
+    WorkingDirectory:
+      WorkingDirectory: /app/runnerdata
+      TempDirectory: /app/runnerdata/.temp
+    HooksPreapproval:
+      Enabled: false
+      PreapprovedHooksDirectory: /app/preapproved-hooks
+    Engine:
+      AdditionalBinaryPaths:
+      - ~/.pulumi/bin
+    RunnerEnvVars:
+      SNAPCD_CLIENT_ID: default
+      SNAPCD_CLIENT_SECRET: default
+
+credentials:
+  # -- The Runner's client secret, injected as `Runner__Credentials__ClientSecret`. The default is the reference deployment's public sample secret for the pre-seeded `default` service principal.
+  clientSecret: "default"
+  # -- Name of an existing Secret holding the client secret.
+  existingSecret: ""
+  # -- Key of the client secret in `credentials.existingSecret`.
+  existingSecretKey: Runner__Credentials__ClientSecret
+
+ssh:
+  # -- Private key for cloning private Git repositories. Staged into the pod at 0600 for `git` over SSH.
+  privateKey: ""
+  # -- Name of an existing Secret holding the private key.
+  existingSecret: ""
+  # -- Key of the private key in `ssh.existingSecret`.
+  existingSecretKey: id_rsa
+  # -- `known_hosts` content. The default covers GitHub and GitLab.
+  # @default -- GitHub and GitLab host keys
+  knownHosts: |
+    [ssh.github.com]:443 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+    [ssh.github.com]:443 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+    [ssh.github.com]:443 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+    github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+    github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+    github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+    gitlab.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBFSMqzJeV9rUzU4kWitGjeR4PWSa29SPqJ1fVkhtj3Hw9xjLVXVYrU9QlYWrOLXBpQ6KWjbjTDTdDkoohFzgbEY=
+    gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
+    gitlab.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCsj2bNKTBSpIYDEGk9KxsGh3mySTRgMtXL583qmBpzeQ+jqCMRgBqB98u3z++J1sKlXHWfM9dyhSevkMwSbhoR8XIq/U0tCNyokEi/ueaBMCvbcTHhO7FcwzY92WK4Yt0aGROY5qX2UKSeOvuP4D6TPqKF1onrSzH9bx9XUf2lEdWT/ia1NEKjunUqu1xOB/StKDHMoX4/OKyIzuS0q/T1zOATthvasJFoPrAjkohTyaDUz2LN5JoH839hViyEG82yB+MjcFV5MU3N1l1QL3cVUCh93xSaua1N85qivl+siMkPGbO5xR/En4iEY6K2XPASUEMaieWVNTRCtJ4S8H+9
+  # -- Name of an existing ConfigMap holding `known_hosts`.
+  existingKnownHostsConfigMap: ""
+  # -- Key of `known_hosts` in `ssh.existingKnownHostsConfigMap`.
+  existingKnownHostsConfigMapKey: known_hosts
+
+preapprovedHooks:
+  # -- Name of an existing ConfigMap holding the pre-approved hook scripts.
+  existingConfigMap: ""
+  # -- Pre-approved hook scripts, file name to content, mounted at `HooksPreapproval.PreapprovedHooksDirectory`.
+  # @default -- the reference deployment's `sample.sh`
+  hooks:
+    sample.sh: |
+      echo "This is a sample shell script that SnapCd.Runner will execute when instructed to as a before/after hook for init, validate, plan, apply or destroy acitivites"
+
+persistence:
+  # -- Keep the working directory on a PersistentVolumeClaim per pod. Off uses an emptyDir.
+  enabled: true
+  # -- Volume size.
+  size: 10Gi
+  # -- Storage class. Empty uses the cluster default.
+  storageClass: ""
+  # -- Access modes.
+  accessModes:
+    - ReadWriteOnce
+  # -- Where the working directory is mounted. Must agree with `WorkingDirectory.WorkingDirectory` in the settings.
+  mountPath: /app/runnerdata
+
+engines:
+  download:
+    # -- Download engine binaries when the pod starts, checked against the release's SHA256SUMS, and use them in place of the ones the Runner image ships. Off uses the image's.
+    enabled: false
+    # -- OpenTofu version to download. Empty keeps the image's.
+    tofuVersion: ""
+    # -- Terraform version to download. Empty keeps the image's. Snap CD supports Terraform up to 1.5.7.
+    terraformVersion: ""
+    image:
+      # -- Download image registry. Empty pulls from Docker Hub.
+      registry: ""
+      # -- Download image repository. Needs `wget`, `unzip` and `sha256sum`.
+      repository: alpine
+      # -- Download image tag.
+      tag: "3.20"
+      # -- Download image digest.
+      digest: ""
+      # -- Download image pull policy.
+      pullPolicy: IfNotPresent
+
+workloadIdentity:
+  azure:
+    # -- Azure workload identity client id. Sets the ServiceAccount annotation and the pod label.
+    clientId: ""
+    # -- Azure tenant id, when it differs from the cluster's.
+    tenantId: ""
+  aws:
+    # -- IAM role for IRSA. Sets `eks.amazonaws.com/role-arn` on the ServiceAccount.
+    roleArn: ""
+  gcp:
+    # -- Google service account for GKE workload identity. Sets `iam.gke.io/gcp-service-account` on the ServiceAccount.
+    serviceAccount: ""
+
+serviceAccount:
+  # -- Create a ServiceAccount for the Runner.
+  create: true
+  # -- ServiceAccount name. Defaults to the full name when `create` is true, and to `default` otherwise.
+  name: ""
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- Mount the ServiceAccount token into the pod.
+  automount: true
+
+# -- Pod annotations.
+podAnnotations: {}
+# -- Pod labels.
+podLabels: {}
+# -- Pod security context.
+podSecurityContext: {}
+# -- Container security context, applied to the Runner and the SSH staging init container.
+securityContext: {}
+
+# -- Container resources.
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 100m
+  limits:
+    memory: 1Gi
+    cpu: 1000m
+
+# -- StatefulSet update strategy.
+updateStrategy: {}
+# -- StatefulSet pod management policy.
+podManagementPolicy: OrderedReady
+
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}
+# -- Topology spread constraints.
+topologySpreadConstraints: []
+# -- Priority class name.
+priorityClassName: ""
+
+# -- Extra environment variables for the Runner container.
+extraEnv: []
+# -- Extra `envFrom` sources for the Runner container.
+extraEnvFrom: []
+# -- Extra volumes.
+extraVolumes: []
+# -- Extra volume mounts for the Runner container.
+extraVolumeMounts: []
+# -- Init containers, run after SSH staging.
+initContainers: []
+# -- Extra containers (sidecars).
+extraContainers: []
+
+# -- Extra manifests, rendered through `tpl`.
+extraManifests: []
