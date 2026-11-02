@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/name: snapcd-agent
     app.kubernetes.io/instance: snapcd-agent
     app.kubernetes.io/component: sidecar-claude
-    app.kubernetes.io/version: "1.15.8"
+    app.kubernetes.io/version: "1.15.9"
     app.kubernetes.io/part-of: snapcd
 spec:
   type: ClusterIP
@@ -31,7 +31,7 @@ metadata:
     app.kubernetes.io/name: snapcd-agent
     app.kubernetes.io/instance: snapcd-agent
     app.kubernetes.io/component: agent
-    app.kubernetes.io/version: "1.15.8"
+    app.kubernetes.io/version: "1.15.9"
     app.kubernetes.io/part-of: snapcd
 spec:
   replicas: 1
@@ -48,14 +48,14 @@ spec:
         app.kubernetes.io/name: snapcd-agent
         app.kubernetes.io/instance: snapcd-agent
         app.kubernetes.io/component: agent
-        app.kubernetes.io/version: "1.15.8"
+        app.kubernetes.io/version: "1.15.9"
         app.kubernetes.io/part-of: snapcd
     spec:
       serviceAccountName: default
       automountServiceAccountToken: true
       containers:
         - name: snapcd-agent
-          image: ghcr.io/schrieksoft/snapcd/snapcd-agent:1.15.8
+          image: ghcr.io/schrieksoft/snapcd/snapcd-agent:1.15.9
           imagePullPolicy: IfNotPresent
           env:
             - name: POD_NAME
@@ -97,7 +97,7 @@ metadata:
     app.kubernetes.io/name: snapcd-agent
     app.kubernetes.io/instance: snapcd-agent
     app.kubernetes.io/component: sidecar-claude
-    app.kubernetes.io/version: "1.15.8"
+    app.kubernetes.io/version: "1.15.9"
     app.kubernetes.io/part-of: snapcd
 spec:
   replicas: 1
@@ -114,14 +114,14 @@ spec:
         app.kubernetes.io/name: snapcd-agent
         app.kubernetes.io/instance: snapcd-agent
         app.kubernetes.io/component: sidecar-claude
-        app.kubernetes.io/version: "1.15.8"
+        app.kubernetes.io/version: "1.15.9"
         app.kubernetes.io/part-of: snapcd
     spec:
       serviceAccountName: default
       automountServiceAccountToken: true
       containers:
         - name: snapcd-agent-sidecar-claude
-          image: ghcr.io/schrieksoft/snapcd/snapcd-agent-sidecar-claude:1.15.8
+          image: ghcr.io/schrieksoft/snapcd/snapcd-agent-sidecar-claude:1.15.9
           imagePullPolicy: IfNotPresent
           env:
             - name: PORT
