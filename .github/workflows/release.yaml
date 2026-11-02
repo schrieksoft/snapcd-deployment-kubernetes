@@ -17,6 +17,8 @@ jobs:
 
     permissions:
       contents: write
+      packages: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -63,6 +65,47 @@ jobs:
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Setup Helm
+        if: github.ref == 'refs/heads/main' && steps.norelease.outputs.skip != 'true' && steps.moved.outputs.publish == 'true'
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
+
+      - name: Install cosign
+        if: github.ref == 'refs/heads/main' && steps.norelease.outputs.skip != 'true' && steps.moved.outputs.publish == 'true'
+        uses: sigstore/cosign-installer@v3
+
+      # The committed chart versions are placeholders; every chart and the umbrella's dependencies take the repo version.
+      - name: Package the charts
+        if: github.ref == 'refs/heads/main' && steps.norelease.outputs.skip != 'true' && steps.moved.outputs.publish == 'true'
+        env:
+          SEMVER: ${{ steps.gitversion.outputs.SemVer }}
+        run: |
+          for chart in charts/*/Chart.yaml; do
+            yq -i '.version = strenv(SEMVER)' "$chart"
+          done
+          yq -i '(.dependencies[] | .version) = strenv(SEMVER)' charts/snapcd/Chart.yaml
+          helm dependency update charts/snapcd
+          mkdir -p "$RUNNER_TEMP/charts"
+          for chart in charts/*/; do
+            helm package "$chart" --destination "$RUNNER_TEMP/charts"
+          done
+          ls -l "$RUNNER_TEMP/charts"
+
+      - name: Push and sign the charts
+        if: github.ref == 'refs/heads/main' && steps.norelease.outputs.skip != 'true' && steps.moved.outputs.publish == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${GITHUB_TOKEN}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+          for package in "$RUNNER_TEMP"/charts/*.tgz; do
+            output="$(helm push "$package" oci://ghcr.io/schrieksoft/charts 2>&1)"
+            echo "$output"
+            ref="$(echo "$output" | sed -n 's/^Pushed: //p')"
+            digest="$(echo "$output" | sed -n 's/^Digest: //p')"
+            cosign sign --yes "${ref%:*}@${digest}"
+          done
+
       - name: Release
         if: github.ref == 'refs/heads/main' && steps.norelease.outputs.skip != 'true' && steps.moved.outputs.publish == 'true'
         env:
@@ -76,4 +119,5 @@ jobs:
           gh release create "${SEMVER}" \
             --title "${SEMVER}" \
             --notes-file "$RUNNER_TEMP/release-notes.md" \
-            -R "${GITHUB_REPOSITORY}"
+            -R "${GITHUB_REPOSITORY}" \
+            "$RUNNER_TEMP"/charts/*.tgz

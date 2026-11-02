@@ -98,9 +98,10 @@ The Runner and Agent both register automatically using the `default` / `defaultA
 The same deployment is available as Helm charts in `charts/`: `snapcd` for the whole stack in one namespace, and `snapcd-server`, `snapcd-runner` and `snapcd-agent` for one component each. Each chart's README lists its values. The Kustomize manifests in `components/*/generated.yaml` are rendered from these charts by `scripts/render-kustomize.sh`; change the chart or `kustomize-values.yaml`, not the generated file.
 
 ```bash
-helm dependency update ./charts/snapcd
-helm install snapcd ./charts/snapcd --namespace snapcd --create-namespace
+helm install snapcd oci://ghcr.io/schrieksoft/charts/snapcd --namespace snapcd --create-namespace
 ```
+
+The charts are published to `oci://ghcr.io/schrieksoft/charts` with each release of this repo, signed with cosign. From a checkout, run `helm dependency update ./charts/snapcd` first and install `./charts/snapcd`.
 
 ## A local cluster with kind
 

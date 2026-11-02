@@ -7,7 +7,7 @@ The Snap CD Agent, with its Claude sidecar for inference.
 ## Installing
 
 ```bash
-helm install snapcd-agent ./charts/snapcd-agent --namespace snapcd-agent --create-namespace \
+helm install snapcd-agent oci://ghcr.io/schrieksoft/charts/snapcd-agent --namespace snapcd-agent --create-namespace \
   --set sidecar.credentials.apiKey='<your Anthropic API key>'
 ```
 

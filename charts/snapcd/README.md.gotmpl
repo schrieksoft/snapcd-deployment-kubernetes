@@ -7,8 +7,7 @@
 ## Installing
 
 ```bash
-helm dependency update ./charts/snapcd
-helm install snapcd ./charts/snapcd --namespace snapcd --create-namespace
+helm install snapcd oci://ghcr.io/schrieksoft/charts/snapcd --namespace snapcd --create-namespace
 kubectl -n snapcd port-forward svc/snapcd-server 5000:5000
 ```
 
@@ -17,7 +16,7 @@ The dashboard is then at http://localhost:5000, with the pre-seeded admin of the
 To add the Agent:
 
 ```bash
-helm upgrade snapcd ./charts/snapcd --namespace snapcd --reuse-values \
+helm upgrade snapcd oci://ghcr.io/schrieksoft/charts/snapcd --namespace snapcd --reuse-values \
   --set agent.enabled=true \
   --set agent.sidecar.credentials.apiKey='<your Anthropic API key>'
 ```

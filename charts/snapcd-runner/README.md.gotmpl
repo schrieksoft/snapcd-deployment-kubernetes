@@ -7,7 +7,7 @@
 ## Installing
 
 ```bash
-helm install snapcd-runner ./charts/snapcd-runner --namespace snapcd-runner --create-namespace
+helm install snapcd-runner oci://ghcr.io/schrieksoft/charts/snapcd-runner --namespace snapcd-runner --create-namespace
 ```
 
 The defaults are the reference deployment's sample settings, the same as the Docker deployment: the Runner connects as the pre-seeded `default` service principal to a Server installed as `snapcd-server` in the `snapcd-server` namespace. Every credential in them is public. For a Runner of your own, set `config.appsettings.Runner` (its id, organization and client id), `config.appsettings.Server.Url`, and `credentials`.

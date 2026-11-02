@@ -7,7 +7,7 @@ The Snap CD Server, with optional bundled SQL Server and Redis.
 ## Installing
 
 ```bash
-helm install snapcd-server ./charts/snapcd-server --namespace snapcd-server --create-namespace
+helm install snapcd-server oci://ghcr.io/schrieksoft/charts/snapcd-server --namespace snapcd-server --create-namespace
 kubectl -n snapcd-server port-forward svc/snapcd-server 5000:5000
 ```
 
