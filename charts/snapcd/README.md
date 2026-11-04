@@ -1,6 +1,6 @@
 # snapcd
 
-![AppVersion: 1.15.10](https://img.shields.io/badge/AppVersion-1.15.10-informational?style=flat-square)
+![AppVersion: 1.15.12](https://img.shields.io/badge/AppVersion-1.15.12-informational?style=flat-square)
 
 Snap CD in one release - the Server, a Runner and optionally the Agent, in one namespace.
 
