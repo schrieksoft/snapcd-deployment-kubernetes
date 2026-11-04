@@ -14,3 +14,6 @@ charts/snapcd/Chart.lock
 
 # Claude credential for the Agent on the local kind cluster
 kind/agent.env
+
+# Local-only helper scripts, not part of the reference deployment
+*.local.sh

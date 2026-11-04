@@ -346,6 +346,18 @@
         },
         "affinity": {
           "type": "object"
+        },
+        "nodePort": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "port": {
+              "type": "integer"
+            }
+          }
         }
       }
     },
@@ -403,6 +415,18 @@
         },
         "affinity": {
           "type": "object"
+        },
+        "nodePort": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "port": {
+              "type": "integer"
+            }
+          }
         }
       }
     },

@@ -6,8 +6,5 @@ config:
 serviceAccount:
   create: false
 sqlserver:
-  fullnameOverride: sqlserver
   auth:
     existingSecret: sqlserver-credentials
-redis:
-  fullnameOverride: redis

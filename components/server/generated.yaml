@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: redis
+  name: snapcd-server-redis
   namespace: snapcd-server
   labels:
     app.kubernetes.io/name: snapcd-server
@@ -47,7 +47,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: sqlserver
+  name: snapcd-server-sqlserver
   namespace: snapcd-server
   labels:
     app.kubernetes.io/name: snapcd-server
@@ -171,7 +171,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: redis
+  name: snapcd-server-redis
   namespace: snapcd-server
   labels:
     app.kubernetes.io/name: snapcd-server
@@ -248,7 +248,7 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: sqlserver
+  name: snapcd-server-sqlserver
   namespace: snapcd-server
   labels:
     app.kubernetes.io/name: snapcd-server
@@ -257,7 +257,7 @@ metadata:
     app.kubernetes.io/version: "1.15.12"
     app.kubernetes.io/part-of: snapcd
 spec:
-  serviceName: sqlserver
+  serviceName: snapcd-server-sqlserver
   replicas: 1
   selector:
     matchLabels:

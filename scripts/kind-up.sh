@@ -10,6 +10,8 @@
 # Environment:
 #   KIND_CLUSTER     cluster name (default: snapcd)
 #   KIND_HTTP_PORT   host port for the ingress (default: 9080)
+#   KIND_SQL_PORT    host port for SQL Server (default: 31433; empty to not expose it)
+#   KIND_REDIS_PORT  host port for Redis (default: 31379; empty to not expose it)
 #
 # Everything else is the defaults: the reference deployment's sample settings. With the chart,
 # the Agent is installed when kind/agent.env holds a Claude credential (see kind/agent.env.example).
@@ -20,6 +22,11 @@ cd "$ROOT"
 
 CLUSTER="${KIND_CLUSTER:-snapcd}"
 HTTP_PORT="${KIND_HTTP_PORT:-9080}"
+# The database and the cache are published on the node so they can be queried from the host.
+# kind maps host ports when the cluster is created, so these have to match the node ports the
+# chart asks for, and the cluster has to be recreated to change them.
+SQL_PORT="${KIND_SQL_PORT-31433}"
+REDIS_PORT="${KIND_REDIS_PORT-31379}"
 INGRESS_NGINX_VERSION="controller-v1.11.3"
 URL="http://snapcd.localhost:${HTTP_PORT}"
 
@@ -61,6 +68,18 @@ nodes:
       - containerPort: 80
         hostPort: ${HTTP_PORT}
         protocol: TCP
+$( [[ -n "$SQL_PORT" ]] && cat <<SQL
+      - containerPort: 31433
+        hostPort: ${SQL_PORT}
+        protocol: TCP
+SQL
+)
+$( [[ -n "$REDIS_PORT" ]] && cat <<REDIS
+      - containerPort: 31379
+        hostPort: ${REDIS_PORT}
+        protocol: TCP
+REDIS
+)
 YAML
     kind create cluster --name "$CLUSTER" --config "$WORK/cluster.yaml"
 fi
@@ -118,11 +137,16 @@ if [[ "$MODE" == "chart" ]]; then
         LOCAL_VALUES=(--values kind/values-local.yaml)
     fi
 
+    DB_PORTS=()
+    [[ -n "$SQL_PORT" ]] && DB_PORTS+=(--set server.sqlserver.nodePort.enabled=true)
+    [[ -n "$REDIS_PORT" ]] && DB_PORTS+=(--set server.redis.nodePort.enabled=true)
+
     "${HELM[@]}" upgrade --install snapcd charts/snapcd \
         --namespace snapcd --create-namespace \
         --values kind/values.yaml \
         "${LOCAL_VALUES[@]}" \
         --set-string "server.ingress.publicPort=${HTTP_PORT}" \
+        "${DB_PORTS[@]}" \
         "${AGENT[@]}" \
         --wait --timeout 10m
 else
@@ -135,7 +159,7 @@ else
               cat
           fi \
         | "${KUBECTL[@]}" apply -f - >/dev/null
-    "${KUBECTL[@]}" -n snapcd-server rollout status statefulset/sqlserver --timeout=300s
+    "${KUBECTL[@]}" -n snapcd-server rollout status statefulset/snapcd-server-sqlserver --timeout=300s
     "${KUBECTL[@]}" -n snapcd-server rollout status deployment/snapcd-server --timeout=600s
     "${KUBECTL[@]}" -n snapcd-runner rollout status statefulset/snapcd-runner --timeout=300s
     "${KUBECTL[@]}" -n snapcd-agent rollout status deployment/snapcd-agent --timeout=300s
@@ -143,3 +167,5 @@ fi
 
 echo
 echo "Snap CD is up at ${URL}"
+[[ -n "$SQL_PORT" ]] && echo "SQL Server:  localhost,${SQL_PORT}  (sa / the chart's sample password)"
+[[ -n "$REDIS_PORT" ]] && echo "Redis:       localhost:${REDIS_PORT}"

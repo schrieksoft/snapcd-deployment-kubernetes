@@ -8,13 +8,16 @@ metadata:
   labels:
     {{- include "snapcd-server.labels" (dict "ctx" $ "component" "redis") | nindent 4 }}
 spec:
-  type: ClusterIP
+  type: {{ if .Values.redis.nodePort.enabled }}NodePort{{ else }}ClusterIP{{ end }}
   selector:
     {{- include "snapcd-server.selectorLabels" (dict "ctx" $ "component" "redis") | nindent 4 }}
   ports:
     - name: redis
       port: 6379
       targetPort: redis
+      {{- if .Values.redis.nodePort.enabled }}
+      nodePort: {{ .Values.redis.nodePort.port }}
+      {{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment

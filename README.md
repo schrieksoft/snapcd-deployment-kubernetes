@@ -63,8 +63,8 @@ Each component deploys to its own namespace, so cross-component traffic crosses 
 | Agent (orchestrator) → Server   | `http://snapcd-server.snapcd-server.svc.cluster.local:5000`     |
 | Agent (sidecar) → Server (MCP)  | `http://snapcd-server.snapcd-server.svc.cluster.local:5000`     |
 | Agent (orchestrator) → sidecar  | `http://snapcd-agent-sidecar-claude.snapcd-agent.svc.cluster.local:7001` |
-| Server → SQL Server             | `sqlserver.snapcd-server.svc.cluster.local:1433`                |
-| Server → Redis                  | `redis.snapcd-server.svc.cluster.local:6379`                    |
+| Server → SQL Server             | `snapcd-server-sqlserver.snapcd-server.svc.cluster.local:1433`                |
+| Server → Redis                  | `snapcd-server-redis.snapcd-server.svc.cluster.local:6379`                    |
 
 These URLs are baked into the shipped `appsettings.json` files. If your cluster runs NetworkPolicies that default-deny, you'll need to explicitly permit traffic between the `snapcd-runner` / `snapcd-agent` namespaces and `snapcd-server`.
 

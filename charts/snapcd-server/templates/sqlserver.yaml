@@ -24,13 +24,20 @@ metadata:
   labels:
     {{- include "snapcd-server.labels" (dict "ctx" $ "component" "sqlserver") | nindent 4 }}
 spec:
+  {{- if .Values.sqlserver.nodePort.enabled }}
+  type: NodePort
+  {{- else }}
   clusterIP: None
+  {{- end }}
   selector:
     {{- include "snapcd-server.selectorLabels" (dict "ctx" $ "component" "sqlserver") | nindent 4 }}
   ports:
     - name: tds
       port: 1433
       targetPort: tds
+      {{- if .Values.sqlserver.nodePort.enabled }}
+      nodePort: {{ .Values.sqlserver.nodePort.port }}
+      {{- end }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet

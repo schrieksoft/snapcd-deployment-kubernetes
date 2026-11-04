@@ -294,6 +294,13 @@ sqlserver:
     pullPolicy: IfNotPresent
   # -- Value of `MSSQL_PID`.
   edition: Developer
+  nodePort:
+    # -- Expose SQL Server on a node port. For a local cluster only: it puts the database on the
+    # host, reachable by anything that can reach the node.
+    enabled: false
+    # -- Node port to expose SQL Server on. Must be within the cluster's node port range, and on
+    # kind the same port must be mapped when the cluster is created.
+    port: 31433
   auth:
     # -- `sa` password. The default is the reference deployment's public sample password.
     saPassword: myPassw0rd
@@ -364,6 +371,13 @@ redis:
     digest: ""
     # -- Redis image pull policy.
     pullPolicy: IfNotPresent
+  nodePort:
+    # -- Expose Redis on a node port. For a local cluster only: it puts the cache on the host,
+    # reachable by anything that can reach the node.
+    enabled: false
+    # -- Node port to expose Redis on. Must be within the cluster's node port range, and on kind
+    # the same port must be mapped when the cluster is created.
+    port: 31379
   # -- Redis resources.
   resources:
     requests:
