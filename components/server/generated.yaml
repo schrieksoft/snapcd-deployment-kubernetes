@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/name: snapcd-server
     app.kubernetes.io/instance: snapcd-server
     app.kubernetes.io/component: redis
-    app.kubernetes.io/version: "1.15.14"
+    app.kubernetes.io/version: "1.16.0"
     app.kubernetes.io/part-of: snapcd
 spec:
   type: ClusterIP
@@ -31,7 +31,7 @@ metadata:
     app.kubernetes.io/name: snapcd-server
     app.kubernetes.io/instance: snapcd-server
     app.kubernetes.io/component: server
-    app.kubernetes.io/version: "1.15.14"
+    app.kubernetes.io/version: "1.16.0"
     app.kubernetes.io/part-of: snapcd
 spec:
   type: ClusterIP
@@ -53,7 +53,7 @@ metadata:
     app.kubernetes.io/name: snapcd-server
     app.kubernetes.io/instance: snapcd-server
     app.kubernetes.io/component: sqlserver
-    app.kubernetes.io/version: "1.15.14"
+    app.kubernetes.io/version: "1.16.0"
     app.kubernetes.io/part-of: snapcd
 spec:
   clusterIP: None
@@ -75,7 +75,7 @@ metadata:
     app.kubernetes.io/name: snapcd-server
     app.kubernetes.io/instance: snapcd-server
     app.kubernetes.io/component: server
-    app.kubernetes.io/version: "1.15.14"
+    app.kubernetes.io/version: "1.16.0"
     app.kubernetes.io/part-of: snapcd
 spec:
   replicas: 1
@@ -92,7 +92,7 @@ spec:
         app.kubernetes.io/name: snapcd-server
         app.kubernetes.io/instance: snapcd-server
         app.kubernetes.io/component: server
-        app.kubernetes.io/version: "1.15.14"
+        app.kubernetes.io/version: "1.16.0"
         app.kubernetes.io/part-of: snapcd
     spec:
       serviceAccountName: default
@@ -106,7 +106,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: snapcd-server
-          image: ghcr.io/schrieksoft/snapcd/snapcd-server:1.15.14
+          image: ghcr.io/schrieksoft/snapcd/snapcd-server:1.16.0
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -177,7 +177,7 @@ metadata:
     app.kubernetes.io/name: snapcd-server
     app.kubernetes.io/instance: snapcd-server
     app.kubernetes.io/component: redis
-    app.kubernetes.io/version: "1.15.14"
+    app.kubernetes.io/version: "1.16.0"
     app.kubernetes.io/part-of: snapcd
 spec:
   replicas: 1
@@ -194,7 +194,7 @@ spec:
         app.kubernetes.io/name: snapcd-server
         app.kubernetes.io/instance: snapcd-server
         app.kubernetes.io/component: redis
-        app.kubernetes.io/version: "1.15.14"
+        app.kubernetes.io/version: "1.16.0"
         app.kubernetes.io/part-of: snapcd
     spec:
       securityContext:
@@ -254,7 +254,7 @@ metadata:
     app.kubernetes.io/name: snapcd-server
     app.kubernetes.io/instance: snapcd-server
     app.kubernetes.io/component: sqlserver
-    app.kubernetes.io/version: "1.15.14"
+    app.kubernetes.io/version: "1.16.0"
     app.kubernetes.io/part-of: snapcd
 spec:
   serviceName: snapcd-server-sqlserver
@@ -270,7 +270,7 @@ spec:
         app.kubernetes.io/name: snapcd-server
         app.kubernetes.io/instance: snapcd-server
         app.kubernetes.io/component: sqlserver
-        app.kubernetes.io/version: "1.15.14"
+        app.kubernetes.io/version: "1.16.0"
         app.kubernetes.io/part-of: snapcd
     spec:
       terminationGracePeriodSeconds: 30
