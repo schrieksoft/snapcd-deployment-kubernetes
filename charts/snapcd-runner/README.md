@@ -1,6 +1,6 @@
 # snapcd-runner
 
-![AppVersion: 1.15.12](https://img.shields.io/badge/AppVersion-1.15.12-informational?style=flat-square)
+![AppVersion: 1.16.1](https://img.shields.io/badge/AppVersion-1.16.1-informational?style=flat-square)
 
 A Snap CD Runner, which executes OpenTofu, Terraform and Pulumi jobs for a Snap CD Server.
 
@@ -88,6 +88,8 @@ Cloud credentials come from `workloadIdentity` (Azure, AWS or GCP), which annota
 | ssh.existingKnownHostsConfigMapKey | string | `"known_hosts"` | Key of `known_hosts` in `ssh.existingKnownHostsConfigMap`. |
 | ssh.existingSecret | string | `""` | Name of an existing Secret holding the private key. |
 | ssh.existingSecretKey | string | `"id_rsa"` | Key of the private key in `ssh.existingSecret`. |
+| ssh.keyVolume | object | `{}` | Volume to read the private key from instead of a Secret, such as a Secrets Store CSI driver volume, so the key never has to exist as a Kubernetes Secret. Any volume source that `volumes` accepts. Takes precedence over `ssh.privateKey` and `ssh.existingSecret`. |
+| ssh.keyVolumeKey | string | `"id_rsa"` | File in `ssh.keyVolume` that holds the private key. |
 | ssh.knownHosts | string | GitHub and GitLab host keys | `known_hosts` content. The default covers GitHub and GitLab. |
 | ssh.privateKey | string | `""` | Private key for cloning private Git repositories. Staged into the pod at 0600 for `git` over SSH. |
 | ssh.resources | object | `{"limits":{"cpu":"100m","memory":"64Mi"},"requests":{"cpu":"10m","memory":"16Mi"}}` | Resources of the `stage-ssh` init container, which only copies two files. |

@@ -1,0 +1,8 @@
+ssh:
+  keyVolume:
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      volumeAttributes:
+        secretProviderClass: snapcd-runner-ssh
+  keyVolumeKey: snapcd-runner-ssh-private-key

@@ -26,6 +26,39 @@ tests:
             name: GIT_SSH_COMMAND
             value: ssh -i /run/snapcd/ssh/id_rsa -o UserKnownHostsFile=/run/snapcd/ssh/known_hosts
 
+  - it: stages the SSH key from a CSI volume instead of a Secret
+    set:
+      ssh.privateKey: unused
+      ssh.keyVolume:
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: snapcd-runner-ssh
+      ssh.keyVolumeKey: snapcd-runner-ssh-private-key
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: ssh-key
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: snapcd-runner-ssh
+      - contains:
+          path: spec.template.spec.initContainers[0].volumeMounts
+          content:
+            name: ssh-key
+            mountPath: /run/secrets/ssh/id_rsa
+            subPath: snapcd-runner-ssh-private-key
+            readOnly: true
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GIT_SSH_COMMAND
+            value: ssh -i /run/snapcd/ssh/id_rsa -o UserKnownHostsFile=/run/snapcd/ssh/known_hosts
+
   - it: stages only known_hosts when there is no key
     asserts:
       - contains:

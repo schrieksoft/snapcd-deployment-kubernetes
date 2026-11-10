@@ -80,7 +80,7 @@ app.kubernetes.io/managed-by: {{ .ctx.Release.Service }}
 {{- end }}
 
 {{- define "snapcd-runner.hasSshKey" -}}
-{{- if or .Values.ssh.privateKey .Values.ssh.existingSecret }}true{{ end }}
+{{- if or .Values.ssh.privateKey .Values.ssh.existingSecret .Values.ssh.keyVolume }}true{{ end }}
 {{- end }}
 
 {{- define "snapcd-runner.hasKnownHosts" -}}

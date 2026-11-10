@@ -1,4 +1,4 @@
-{{- if and .Values.ssh.privateKey (not .Values.ssh.existingSecret) }}
+{{- if and .Values.ssh.privateKey (not .Values.ssh.existingSecret) (not .Values.ssh.keyVolume) }}
 apiVersion: v1
 kind: Secret
 metadata:

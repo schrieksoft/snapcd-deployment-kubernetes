@@ -72,6 +72,11 @@ ssh:
   existingSecret: ""
   # -- Key of the private key in `ssh.existingSecret`.
   existingSecretKey: id_rsa
+  # -- Volume to read the private key from instead of a Secret, such as a Secrets Store CSI driver volume, so the key never has to exist as a Kubernetes Secret. Any volume source that `volumes` accepts. Takes precedence over `ssh.privateKey` and `ssh.existingSecret`.
+  # @default -- `{}`
+  keyVolume: {}
+  # -- File in `ssh.keyVolume` that holds the private key.
+  keyVolumeKey: id_rsa
   # -- `known_hosts` content. The default covers GitHub and GitLab.
   # @default -- GitHub and GitLab host keys
   knownHosts: |

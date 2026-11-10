@@ -84,6 +84,13 @@
         "existingSecretKey": {
           "type": "string"
         },
+        "keyVolume": {
+          "type": "object"
+        },
+        "keyVolumeKey": {
+          "type": "string",
+          "minLength": 1
+        },
         "knownHosts": {
           "type": "string"
         },

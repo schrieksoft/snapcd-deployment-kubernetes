@@ -133,7 +133,7 @@ spec:
             {{- if $hasKey }}
             - name: ssh-key
               mountPath: /run/secrets/ssh/id_rsa
-              subPath: id_rsa
+              subPath: {{ ternary .Values.ssh.keyVolumeKey "id_rsa" (not (empty .Values.ssh.keyVolume)) }}
               readOnly: true
             {{- end }}
             {{- if $hasKnownHosts }}
@@ -255,12 +255,16 @@ spec:
         {{- end }}
         {{- if $hasKey }}
         - name: ssh-key
+          {{- if .Values.ssh.keyVolume }}
+          {{- toYaml .Values.ssh.keyVolume | nindent 10 }}
+          {{- else }}
           secret:
             secretName: {{ include "snapcd-runner.sshKeySecretName" . }}
             defaultMode: 0440
             items:
               - key: {{ .Values.ssh.existingSecretKey }}
                 path: id_rsa
+          {{- end }}
         {{- end }}
         {{- if $hasKnownHosts }}
         - name: ssh-known-hosts

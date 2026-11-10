@@ -1,0 +1,32 @@
+suite: ssh
+templates:
+  - ssh.yaml
+release:
+  name: snapcd-runner
+  namespace: snapcd-runner
+tests:
+  - it: creates the key Secret from ssh.privateKey
+    set:
+      ssh.privateKey: key
+    documentSelector:
+      path: kind
+      value: Secret
+    asserts:
+      - equal:
+          path: metadata.name
+          value: snapcd-runner-ssh-key
+
+  - it: creates no key Secret when the key comes from a volume
+    set:
+      ssh.privateKey: key
+      ssh.keyVolume:
+        csi:
+          driver: secrets-store.csi.k8s.io
+          volumeAttributes:
+            secretProviderClass: snapcd-runner-ssh
+    asserts:
+      - containsDocument:
+          kind: ConfigMap
+          apiVersion: v1
+      - hasDocuments:
+          count: 1

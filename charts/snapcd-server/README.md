@@ -1,6 +1,6 @@
 # snapcd-server
 
-![AppVersion: 1.15.12](https://img.shields.io/badge/AppVersion-1.15.12-informational?style=flat-square)
+![AppVersion: 1.16.1](https://img.shields.io/badge/AppVersion-1.16.1-informational?style=flat-square)
 
 The Snap CD Server, with optional bundled SQL Server and Redis.
 
@@ -90,6 +90,8 @@ The bundled SQL Server and Redis are for trials. For anything else, turn them of
 | redis.image.registry | string | `""` | Redis image registry. Empty pulls from Docker Hub. |
 | redis.image.repository | string | `"redis"` | Redis image repository. |
 | redis.image.tag | string | `"7-alpine"` | Redis image tag. |
+| redis.nodePort.enabled | bool | `false` | Expose Redis on a node port. For a local cluster only: it puts the cache on the host, reachable by anything that can reach the node. |
+| redis.nodePort.port | int | `31379` | Node port to expose Redis on. Must be within the cluster's node port range, and on kind the same port must be mapped when the cluster is created. |
 | redis.nodeSelector | object | `{}` | Redis node selector. |
 | redis.podAnnotations | object | `{}` | Redis pod annotations. |
 | redis.podLabels | object | `{}` | Redis pod labels. |
@@ -119,6 +121,8 @@ The bundled SQL Server and Redis are for trials. For anything else, turn them of
 | sqlserver.image.registry | string | `"mcr.microsoft.com"` | SQL Server image registry. |
 | sqlserver.image.repository | string | `"mssql/server"` | SQL Server image repository. |
 | sqlserver.image.tag | string | `"2022-latest"` | SQL Server image tag. |
+| sqlserver.nodePort.enabled | bool | `false` | Expose SQL Server on a node port. For a local cluster only: it puts the database on the host, reachable by anything that can reach the node. |
+| sqlserver.nodePort.port | int | `31433` | Node port to expose SQL Server on. Must be within the cluster's node port range, and on kind the same port must be mapped when the cluster is created. |
 | sqlserver.nodeSelector | object | `{}` | SQL Server node selector. |
 | sqlserver.persistence.accessModes | list | `["ReadWriteOnce"]` | Access modes. |
 | sqlserver.persistence.size | string | `"20Gi"` | Volume size. |
