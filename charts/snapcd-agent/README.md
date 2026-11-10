@@ -1,6 +1,6 @@
 # snapcd-agent
 
-![AppVersion: 1.16.3](https://img.shields.io/badge/AppVersion-1.16.3-informational?style=flat-square)
+![AppVersion: 1.16.4](https://img.shields.io/badge/AppVersion-1.16.4-informational?style=flat-square)
 
 The Snap CD Agent, with its Claude sidecar for inference.
 

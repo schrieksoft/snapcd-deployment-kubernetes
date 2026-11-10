@@ -1,6 +1,6 @@
 # snapcd-runner
 
-![AppVersion: 1.16.3](https://img.shields.io/badge/AppVersion-1.16.3-informational?style=flat-square)
+![AppVersion: 1.16.4](https://img.shields.io/badge/AppVersion-1.16.4-informational?style=flat-square)
 
 A Snap CD Runner, which executes OpenTofu, Terraform and Pulumi jobs for a Snap CD Server.
 
