@@ -48,6 +48,10 @@ credentials:
   audience: snapcd
   # -- Lifetime the kubelet gives the projected token, in seconds, when `mode` is `Federated`. The kubelet refreshes it in place.
   tokenExpirationSeconds: 3600
+  # -- File the token is read from, when `mode` is `Federated`. With `projectToken`, the chart projects the token here. Point it at a token another component mounts, such as `/var/run/secrets/azure/tokens/azure-identity-token` from the Azure Workload Identity webhook, and set `projectToken` to false.
+  tokenPath: /var/run/secrets/snapcd/token
+  # -- Project a ServiceAccount token with `audience` at `tokenPath`, when `mode` is `Federated`. Its directory must not be one another component mounts: the Azure Workload Identity webhook mounts `/var/run/secrets/azure/tokens`.
+  projectToken: true
   # -- The Agent's client secret, injected as `Agent__ClientSecret`. The default is the reference deployment's public sample secret for the pre-seeded `defaultAgent` service principal.
   clientSecret: "defaultAgent"
   # -- Name of an existing Secret holding the client secret.

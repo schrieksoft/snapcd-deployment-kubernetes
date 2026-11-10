@@ -58,12 +58,16 @@ config:
       SNAPCD_CLIENT_SECRET: default
 
 credentials:
-  # -- How the Runner authenticates to the Server. `ClientSecret` uses `credentials.clientSecret`. `Federated` presents a projected ServiceAccount token instead, which the Server verifies against the cluster's OIDC issuer, so no secret exists. Federated needs a Federated Credential on the Runner's Service Principal naming this cluster's issuer and this ServiceAccount.
+  # -- How the Runner authenticates to the Server. `ClientSecret` uses `credentials.clientSecret`. `Federated` presents a projected ServiceAccount token instead, which the Server verifies against the cluster's OIDC issuer, so no secret exists. Federated needs a Federated Credential on the Runner's Service Principal naming this cluster's issuer and this ServiceAccount. In Federated mode, jobs get `SNAPCD_FEDERATED_TOKEN_FILE` for the provider and `TF_HTTP_PASSWORD` for the state backend, both from the token, and `SNAPCD_CLIENT_SECRET` is left out of `RunnerEnvVars`. Requires Snap CD 1.17.1 or later.
   mode: ClientSecret
   # -- Audience of the projected ServiceAccount token, when `mode` is `Federated`. Must match the Federated Credential's audience.
   audience: snapcd
   # -- Lifetime the kubelet gives the projected token, in seconds, when `mode` is `Federated`. The kubelet refreshes it in place.
   tokenExpirationSeconds: 3600
+  # -- File the token is read from, when `mode` is `Federated`. With `projectToken`, the chart projects the token here. Point it at a token another component mounts, such as `/var/run/secrets/azure/tokens/azure-identity-token` from the Azure Workload Identity webhook, and set `projectToken` to false.
+  tokenPath: /var/run/secrets/snapcd/token
+  # -- Project a ServiceAccount token with `audience` at `tokenPath`, when `mode` is `Federated`. Its directory must not be one another component mounts: the Azure Workload Identity webhook mounts `/var/run/secrets/azure/tokens`.
+  projectToken: true
   # -- The Runner's client secret, injected as `Runner__Credentials__ClientSecret`. The default is the reference deployment's public sample secret for the pre-seeded `default` service principal.
   clientSecret: "default"
   # -- Name of an existing Secret holding the client secret.

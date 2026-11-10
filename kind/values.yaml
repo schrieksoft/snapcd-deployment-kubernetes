@@ -1,7 +1,45 @@
 # snapcd chart values for the local kind cluster. scripts/kind-up.sh adds the public port,
 # and turns the Agent on when kind/agent.env holds a Claude credential.
+#
+# The Runner and the Agent authenticate with their projected ServiceAccount tokens, with the
+# cluster as OIDC issuer. scripts/deploy.sh lets anonymous callers read the issuer's discovery
+# document and keys, and the Server trusts the cluster CA to fetch them.
 server:
   ingress:
     enabled: true
     className: nginx
     host: snapcd.localhost
+  config:
+    appsettings:
+      ProductionDataSeeder:
+        Preseeded:
+          Runner:
+            # Kept so that tools outside the cluster, such as deploy-sample.local.sh, can still sign in as "default".
+            ServicePrincipalClientSecret: default
+            FederatedCredentials:
+              - Name: kind
+                Issuer: https://kubernetes.default.svc.cluster.local
+                Subject: system:serviceaccount:snapcd:snapcd-runner
+          Agent:
+            ServicePrincipalClientSecret: ""
+            FederatedCredentials:
+              - Name: kind
+                Issuer: https://kubernetes.default.svc.cluster.local
+                Subject: system:serviceaccount:snapcd:snapcd-agent
+  extraEnv:
+    - name: SSL_CERT_DIR
+      value: /etc/ssl/certs:/etc/snapcd/cluster-ca
+  extraVolumes:
+    - name: cluster-ca
+      configMap:
+        name: kube-root-ca.crt
+  extraVolumeMounts:
+    - name: cluster-ca
+      mountPath: /etc/snapcd/cluster-ca
+      readOnly: true
+runner:
+  credentials:
+    mode: Federated
+agent:
+  credentials:
+    mode: Federated

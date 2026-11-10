@@ -121,6 +121,8 @@ spec:
                   fieldPath: metadata.name
             - name: Runner__Instance
               value: "$(POD_NAME)"
+            - name: Runner__Credentials__Mode
+              value: "ClientSecret"
             - name: Runner__Credentials__ClientSecret
               valueFrom:
                 secretKeyRef:

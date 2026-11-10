@@ -78,6 +78,13 @@
         "tokenExpirationSeconds": {
           "type": "integer",
           "minimum": 600
+        },
+        "tokenPath": {
+          "type": "string",
+          "pattern": "^/.+/[^/]+$"
+        },
+        "projectToken": {
+          "type": "boolean"
         }
       }
     },

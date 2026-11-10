@@ -1,6 +1,6 @@
 # snapcd-agent
 
-![AppVersion: 1.16.5](https://img.shields.io/badge/AppVersion-1.16.5-informational?style=flat-square)
+![AppVersion: 1.17.1](https://img.shields.io/badge/AppVersion-1.17.1-informational?style=flat-square)
 
 The Snap CD Agent, with its Claude sidecar for inference.
 
@@ -31,9 +31,14 @@ The defaults are the reference deployment's sample settings, the same as the Doc
 | config.appsettings | object | the reference deployment's sample settings | The Agent's `appsettings.json` as a map, rendered into a ConfigMap. It holds no secrets: the client secret comes from `credentials`. The chart fills `Agent.Sidecars` with the Claude sidecar when that key is absent. The defaults are the reference deployment's sample settings, the same as `components/agent/config/appsettings.json` and the Docker deployment, and connect to a Server installed as `snapcd-server` in the `snapcd-server` namespace. See the Snap CD agent settings reference for every key. |
 | config.existingConfigMap | string | `""` | Name of an existing ConfigMap holding `appsettings.json`. When set, `config.appsettings` is ignored and the chart derives nothing into it. |
 | config.existingConfigMapKey | string | `"appsettings.json"` | Key of `appsettings.json` in `config.existingConfigMap`. |
+| credentials.audience | string | `"snapcd"` | Audience of the projected ServiceAccount token, when `mode` is `Federated`. Must match the Federated Credential's audience. |
 | credentials.clientSecret | string | `"defaultAgent"` | The Agent's client secret, injected as `Agent__ClientSecret`. The default is the reference deployment's public sample secret for the pre-seeded `defaultAgent` service principal. |
 | credentials.existingSecret | string | `""` | Name of an existing Secret holding the client secret. |
 | credentials.existingSecretKey | string | `"Agent__ClientSecret"` | Key of the client secret in `credentials.existingSecret`. |
+| credentials.mode | string | `"ClientSecret"` | How the Agent authenticates to the Server. `ClientSecret` uses `credentials.clientSecret`. `Federated` presents a projected ServiceAccount token instead, which the Server verifies against the cluster's OIDC issuer, so no secret exists. Federated needs a Federated Credential on the Agent's Service Principal naming this cluster's issuer and this ServiceAccount. |
+| credentials.projectToken | bool | `true` | Project a ServiceAccount token with `audience` at `tokenPath`, when `mode` is `Federated`. Its directory must not be one another component mounts: the Azure Workload Identity webhook mounts `/var/run/secrets/azure/tokens`. |
+| credentials.tokenExpirationSeconds | int | `3600` | Lifetime the kubelet gives the projected token, in seconds, when `mode` is `Federated`. The kubelet refreshes it in place. |
+| credentials.tokenPath | string | `"/var/run/secrets/snapcd/token"` | File the token is read from, when `mode` is `Federated`. With `projectToken`, the chart projects the token here. Point it at a token another component mounts, such as `/var/run/secrets/azure/tokens/azure-identity-token` from the Azure Workload Identity webhook, and set `projectToken` to false. |
 | externalSettings.content | object | `{}` | `externalsettings.json` as a map, mounted at `/app/externalsettings.json`. Each entry in `Providers` names a `Loader` (`AzureKeyVault`, `AmazonSecretsManager` or `Literal`), its `Configuration`, and in `Data` the settings it supplies. Settings from this file win over `appsettings.json` and environment variables. |
 | externalSettings.existingSecret | string | `""` | Name of an existing Secret holding `externalsettings.json`. When set, `externalSettings.content` is ignored. |
 | externalSettings.existingSecretKey | string | `"externalsettings.json"` | Key of `externalsettings.json` in `externalSettings.existingSecret`. |

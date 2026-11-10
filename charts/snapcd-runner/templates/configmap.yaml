@@ -8,5 +8,9 @@ metadata:
     {{- include "snapcd-runner.labels" (dict "ctx" $ "component" "runner") | nindent 4 }}
 data:
   appsettings.json: |
-    {{- toPrettyJson .Values.config.appsettings | nindent 4 }}
+    {{- $appsettings := deepCopy .Values.config.appsettings }}
+    {{- if and (eq .Values.credentials.mode "Federated") (hasKey $appsettings "RunnerEnvVars") }}
+    {{- $_ := unset $appsettings.RunnerEnvVars "SNAPCD_CLIENT_SECRET" }}
+    {{- end }}
+    {{- toPrettyJson $appsettings | nindent 4 }}
 {{- end }}

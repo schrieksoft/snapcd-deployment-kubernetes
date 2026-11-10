@@ -1,0 +1,93 @@
+suite: federated credentials
+templates:
+  - statefulset.yaml
+  - configmap.yaml
+  - secret.yaml
+release:
+  name: snapcd-runner
+  namespace: snapcd-runner
+set:
+  credentials.mode: Federated
+tests:
+  - it: projects a token with the audience and points the Runner and its jobs at it
+    template: statefulset.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: Runner__Credentials__AssertionTokenPath
+            value: /var/run/secrets/snapcd/token
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RunnerEnvVars__SNAPCD_FEDERATED_TOKEN_FILE
+            value: /var/run/secrets/snapcd/token
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RunnerFileEnvVars__TF_HTTP_PASSWORD
+            value: /var/run/secrets/snapcd/token
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: federated-token
+            mountPath: /var/run/secrets/snapcd
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: federated-token
+            projected:
+              sources:
+                - serviceAccountToken:
+                    path: token
+                    audience: snapcd
+                    expirationSeconds: 3600
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: Runner__Credentials__ClientSecret
+
+  - it: reads a token another component mounts, such as the Azure Workload Identity webhook's
+    template: statefulset.yaml
+    set:
+      credentials.projectToken: false
+      credentials.tokenPath: /var/run/secrets/azure/tokens/azure-identity-token
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: Runner__Credentials__AssertionTokenPath
+            value: /var/run/secrets/azure/tokens/azure-identity-token
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RunnerFileEnvVars__TF_HTTP_PASSWORD
+            value: /var/run/secrets/azure/tokens/azure-identity-token
+      - notContains:
+          path: spec.template.spec.volumes
+          any: true
+          content:
+            name: federated-token
+      - notContains:
+          path: spec.template.spec.containers[0].volumeMounts
+          any: true
+          content:
+            name: federated-token
+
+  - it: leaves the client secret out of the jobs' environment
+    template: configmap.yaml
+    asserts:
+      - notMatchRegex:
+          path: data["appsettings.json"]
+          pattern: SNAPCD_CLIENT_SECRET
+      - matchRegex:
+          path: data["appsettings.json"]
+          pattern: '"SNAPCD_CLIENT_ID": "default"'
+
+  - it: creates no credentials Secret
+    template: secret.yaml
+    asserts:
+      - hasDocuments:
+          count: 0

@@ -1,6 +1,6 @@
 # snapcd-runner
 
-![AppVersion: 1.16.5](https://img.shields.io/badge/AppVersion-1.16.5-informational?style=flat-square)
+![AppVersion: 1.17.1](https://img.shields.io/badge/AppVersion-1.17.1-informational?style=flat-square)
 
 A Snap CD Runner, which executes OpenTofu, Terraform and Pulumi jobs for a Snap CD Server.
 
@@ -34,9 +34,14 @@ Cloud credentials come from `workloadIdentity` (Azure, AWS or GCP), which annota
 | config.appsettings | object | the reference deployment's sample settings | The Runner's `appsettings.json` as a map, rendered into a ConfigMap. It holds no secrets: the client secret comes from `credentials`. The defaults are the reference deployment's sample settings, the same as `components/runner/config/appsettings.json` and the Docker deployment, and connect to a Server installed as `snapcd-server` in the `snapcd-server` namespace. See the Snap CD runner settings reference for every key. |
 | config.existingConfigMap | string | `""` | Name of an existing ConfigMap holding `appsettings.json`. When set, `config.appsettings` is ignored. |
 | config.existingConfigMapKey | string | `"appsettings.json"` | Key of `appsettings.json` in `config.existingConfigMap`. |
+| credentials.audience | string | `"snapcd"` | Audience of the projected ServiceAccount token, when `mode` is `Federated`. Must match the Federated Credential's audience. |
 | credentials.clientSecret | string | `"default"` | The Runner's client secret, injected as `Runner__Credentials__ClientSecret`. The default is the reference deployment's public sample secret for the pre-seeded `default` service principal. |
 | credentials.existingSecret | string | `""` | Name of an existing Secret holding the client secret. |
 | credentials.existingSecretKey | string | `"Runner__Credentials__ClientSecret"` | Key of the client secret in `credentials.existingSecret`. |
+| credentials.mode | string | `"ClientSecret"` | How the Runner authenticates to the Server. `ClientSecret` uses `credentials.clientSecret`. `Federated` presents a projected ServiceAccount token instead, which the Server verifies against the cluster's OIDC issuer, so no secret exists. Federated needs a Federated Credential on the Runner's Service Principal naming this cluster's issuer and this ServiceAccount. In Federated mode, jobs get `SNAPCD_FEDERATED_TOKEN_FILE` for the provider and `TF_HTTP_PASSWORD` for the state backend, both from the token, and `SNAPCD_CLIENT_SECRET` is left out of `RunnerEnvVars`. Requires Snap CD 1.17.1 or later. |
+| credentials.projectToken | bool | `true` | Project a ServiceAccount token with `audience` at `tokenPath`, when `mode` is `Federated`. Its directory must not be one another component mounts: the Azure Workload Identity webhook mounts `/var/run/secrets/azure/tokens`. |
+| credentials.tokenExpirationSeconds | int | `3600` | Lifetime the kubelet gives the projected token, in seconds, when `mode` is `Federated`. The kubelet refreshes it in place. |
+| credentials.tokenPath | string | `"/var/run/secrets/snapcd/token"` | File the token is read from, when `mode` is `Federated`. With `projectToken`, the chart projects the token here. Point it at a token another component mounts, such as `/var/run/secrets/azure/tokens/azure-identity-token` from the Azure Workload Identity webhook, and set `projectToken` to false. |
 | engines.download.enabled | bool | `false` | Download engine binaries when the pod starts, checked against the release's SHA256SUMS, and use them in place of the ones the Runner image ships. Off uses the image's. |
 | engines.download.image.digest | string | `""` | Download image digest. |
 | engines.download.image.pullPolicy | string | `"IfNotPresent"` | Download image pull policy. |

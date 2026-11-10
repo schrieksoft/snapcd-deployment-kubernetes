@@ -1,0 +1,52 @@
+suite: federated credentials
+templates:
+  - deployment.yaml
+  - secret.yaml
+release:
+  name: snapcd-agent
+  namespace: snapcd-agent
+set:
+  credentials.mode: Federated
+  sidecar.enabled: false
+tests:
+  - it: projects a token with the audience and points the Agent at it
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: Agent__AssertionTokenPath
+            value: /var/run/secrets/snapcd/token
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: federated-token
+            projected:
+              sources:
+                - serviceAccountToken:
+                    path: token
+                    audience: snapcd
+                    expirationSeconds: 3600
+
+  - it: reads a token another component mounts, such as the Azure Workload Identity webhook's
+    template: deployment.yaml
+    set:
+      credentials.projectToken: false
+      credentials.tokenPath: /var/run/secrets/azure/tokens/azure-identity-token
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: Agent__AssertionTokenPath
+            value: /var/run/secrets/azure/tokens/azure-identity-token
+      - notContains:
+          path: spec.template.spec.volumes
+          any: true
+          content:
+            name: federated-token
+
+  - it: creates no credentials Secret
+    template: secret.yaml
+    asserts:
+      - hasDocuments:
+          count: 0

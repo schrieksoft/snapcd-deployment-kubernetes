@@ -72,6 +72,12 @@ if [[ "$MODE" == "chart" ]]; then
         echo "Giving the Runner the SSH key from ${SNAPCD_SSH_KEY}"
     fi
 
+    # The Runner and the Agent authenticate with projected tokens, and the Server checks them
+    # against the cluster's issuer keys, which it fetches without credentials.
+    "${KUBECTL[@]}" create clusterrolebinding snapcd-oidc-discovery \
+        --clusterrole=system:service-account-issuer-discovery --group=system:unauthenticated \
+        --dry-run=client -o yaml | "${KUBECTL[@]}" apply -f - >/dev/null
+
     echo "Installing Snap CD"
     helm dependency update charts/snapcd >/dev/null
     LOCAL_VALUES=()

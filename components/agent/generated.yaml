@@ -77,6 +77,8 @@ spec:
                   fieldPath: metadata.name
             - name: Agent__InstanceName
               value: "$(POD_NAME)"
+            - name: Agent__CredentialMode
+              value: "ClientSecret"
             - name: Agent__ClientSecret
               valueFrom:
                 secretKeyRef:
