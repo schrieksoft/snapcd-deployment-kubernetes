@@ -5,7 +5,7 @@ type: application
 # Stamped by the release pipeline from the repo version.
 version: 0.0.0
 # renovate: datasource=docker depName=ghcr.io/schrieksoft/snapcd/snapcd-agent
-appVersion: "1.16.2"
+appVersion: "1.16.3"
 home: https://snapcd.io
 sources:
   - https://github.com/schrieksoft/snapcd
