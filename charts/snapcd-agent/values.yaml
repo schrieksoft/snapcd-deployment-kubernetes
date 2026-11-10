@@ -42,6 +42,12 @@ config:
       ClientId: defaultAgent
 
 credentials:
+  # -- How the Agent authenticates to the Server. `ClientSecret` uses `credentials.clientSecret`. `Federated` presents a projected ServiceAccount token instead, which the Server verifies against the cluster's OIDC issuer, so no secret exists. Federated needs a Federated Credential on the Agent's Service Principal naming this cluster's issuer and this ServiceAccount.
+  mode: ClientSecret
+  # -- Audience of the projected ServiceAccount token, when `mode` is `Federated`. Must match the Federated Credential's audience.
+  audience: snapcd
+  # -- Lifetime the kubelet gives the projected token, in seconds, when `mode` is `Federated`. The kubelet refreshes it in place.
+  tokenExpirationSeconds: 3600
   # -- The Agent's client secret, injected as `Agent__ClientSecret`. The default is the reference deployment's public sample secret for the pre-seeded `defaultAgent` service principal.
   clientSecret: "defaultAgent"
   # -- Name of an existing Secret holding the client secret.

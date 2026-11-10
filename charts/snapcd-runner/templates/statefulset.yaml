@@ -164,11 +164,18 @@ spec:
                   fieldPath: metadata.name
             - name: Runner__Instance
               value: "$(POD_NAME)"
+            - name: Runner__Credentials__Mode
+              value: {{ .Values.credentials.mode | quote }}
+            {{- if eq .Values.credentials.mode "Federated" }}
+            - name: Runner__Credentials__AssertionTokenPath
+              value: /var/run/secrets/snapcd/token
+            {{- else }}
             - name: Runner__Credentials__ClientSecret
               valueFrom:
                 secretKeyRef:
                   name: {{ include "snapcd-runner.credentialsSecretName" . }}
                   key: {{ .Values.credentials.existingSecretKey }}
+            {{- end }}
             {{- if or $hasKey $hasKnownHosts }}
             - name: GIT_SSH_COMMAND
               value: "ssh{{ if $hasKey }} -i {{ $sshDir }}/id_rsa{{ end }}{{ if $hasKnownHosts }} -o UserKnownHostsFile={{ $sshDir }}/known_hosts{{ end }}"
@@ -191,6 +198,11 @@ spec:
             - name: config
               mountPath: /app/appsettings.json
               subPath: appsettings.json
+            {{- if eq .Values.credentials.mode "Federated" }}
+            - name: federated-token
+              mountPath: /var/run/secrets/snapcd
+              readOnly: true
+            {{- end }}
             {{- if include "snapcd-runner.hasExternalSettings" . }}
             - name: externalsettings
               mountPath: /app/externalsettings.json
@@ -230,6 +242,15 @@ spec:
         {{- tpl (toYaml .) $ | nindent 8 }}
         {{- end }}
       volumes:
+        {{- if eq .Values.credentials.mode "Federated" }}
+        - name: federated-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  audience: {{ .Values.credentials.audience }}
+                  expirationSeconds: {{ .Values.credentials.tokenExpirationSeconds }}
+        {{- end }}
         - name: tmp
           emptyDir: {}
         - name: home

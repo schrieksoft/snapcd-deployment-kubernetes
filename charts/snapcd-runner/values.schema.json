@@ -68,6 +68,20 @@
         },
         "existingSecretKey": {
           "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "ClientSecret",
+            "Federated"
+          ]
+        },
+        "audience": {
+          "type": "string"
+        },
+        "tokenExpirationSeconds": {
+          "type": "integer",
+          "minimum": 600
         }
       }
     },
