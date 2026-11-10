@@ -133,6 +133,14 @@ sidecar:
     githubToken: ""
     # -- Name of an existing Secret holding `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`, and optionally `GITHUB_TOKEN`. Every key is optional in it.
     existingSecret: ""
+    # Paths of files holding the credentials, read by the sidecar at startup, for a vault-backed volume mounted with `sidecar.extraVolumes` and `sidecar.extraVolumeMounts`. Each is passed as `<VARIABLE>_FILE`.
+    files:
+      # -- File holding the Claude subscription token. Set this or `files.apiKey`.
+      oauthToken: ""
+      # -- File holding the Anthropic API key.
+      apiKey: ""
+      # -- File holding the GitHub token.
+      githubToken: ""
   # -- Sidecar pod annotations.
   podAnnotations: {}
   # -- Sidecar pod labels.
@@ -174,6 +182,10 @@ sidecar:
     periodSeconds: 30
   # -- Extra environment variables for the sidecar.
   extraEnv: []
+  # -- Extra volumes for the sidecar pod, such as a Secrets Store CSI volume holding the files named in `sidecar.credentials.files`.
+  extraVolumes: []
+  # -- Extra volume mounts for the sidecar container.
+  extraVolumeMounts: []
 
 externalSettings:
   # -- `externalsettings.json` as a map, mounted at `/app/externalsettings.json`. Each entry in `Providers` names a `Loader` (`AzureKeyVault`, `AmazonSecretsManager` or `Literal`), its `Configuration`, and in `Data` the settings it supplies. Settings from this file win over `appsettings.json` and environment variables.

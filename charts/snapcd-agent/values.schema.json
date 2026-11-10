@@ -173,6 +173,21 @@
             },
             "existingSecret": {
               "type": "string"
+            },
+            "files": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "oauthToken": {
+                  "type": "string"
+                },
+                "apiKey": {
+                  "type": "string"
+                },
+                "githubToken": {
+                  "type": "string"
+                }
+              }
             }
           }
         },
@@ -199,6 +214,18 @@
         },
         "extraEnv": {
           "type": "array"
+        },
+        "extraVolumes": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "extraVolumeMounts": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
         }
       }
     },

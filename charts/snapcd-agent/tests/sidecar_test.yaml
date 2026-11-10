@@ -1,0 +1,64 @@
+suite: sidecar
+templates:
+  - sidecar.yaml
+release:
+  name: snapcd-agent
+  namespace: snapcd-agent
+set:
+  config.appsettings.Server.Url: http://snapcd-server:5000
+  sidecar.credentials.files.oauthToken: /mnt/secrets-store/claude-code-oauth-token
+  sidecar.extraVolumes:
+    - name: credentials
+      csi:
+        driver: secrets-store.csi.k8s.io
+        readOnly: true
+        volumeAttributes:
+          secretProviderClass: snapcd-agent-credentials
+  sidecar.extraVolumeMounts:
+    - name: credentials
+      mountPath: /mnt/secrets-store
+      readOnly: true
+tests:
+  - it: creates no credentials Secret when the credentials are files
+    asserts:
+      - hasDocuments:
+          count: 2
+      - isKind:
+          of: Service
+        documentIndex: 0
+      - isKind:
+          of: Deployment
+        documentIndex: 1
+
+  - it: points the sidecar at the credential files on its mounted volume
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CLAUDE_CODE_OAUTH_TOKEN_FILE
+            value: /mnt/secrets-store/claude-code-oauth-token
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: credentials
+            csi:
+              driver: secrets-store.csi.k8s.io
+              readOnly: true
+              volumeAttributes:
+                secretProviderClass: snapcd-agent-credentials
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: credentials
+            mountPath: /mnt/secrets-store
+            readOnly: true
+
+  - it: still fails with no credential of any kind
+    set:
+      sidecar.credentials.files.oauthToken: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: needs a credential

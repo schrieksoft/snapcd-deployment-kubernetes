@@ -4,8 +4,8 @@
 {{- if and $creds.oauthToken $creds.apiKey }}
 {{- fail "Set one of sidecar.credentials.oauthToken and sidecar.credentials.apiKey, not both." }}
 {{- end }}
-{{- if not (or $creds.oauthToken $creds.apiKey) }}
-{{- fail "The Claude sidecar needs a credential: set sidecar.credentials.oauthToken, sidecar.credentials.apiKey or sidecar.credentials.existingSecret, or set sidecar.enabled=false to run the Agent without it." }}
+{{- if not (or $creds.oauthToken $creds.apiKey $creds.files.oauthToken $creds.files.apiKey) }}
+{{- fail "The Claude sidecar needs a credential: set sidecar.credentials.oauthToken, sidecar.credentials.apiKey, sidecar.credentials.files.oauthToken, sidecar.credentials.files.apiKey or sidecar.credentials.existingSecret, or set sidecar.enabled=false to run the Agent without it." }}
 {{- end }}
 {{- end }}
 {{- $name := include "snapcd-agent.sidecar.fullname" . }}
@@ -13,7 +13,8 @@
 {{- if not $serverUrl }}
 {{- fail "The Claude sidecar needs the Server's URL: set sidecar.serverUrl or config.appsettings.Server.Url." }}
 {{- end }}
-{{- if not $creds.existingSecret }}
+{{- $inline := or $creds.oauthToken $creds.apiKey $creds.githubToken }}
+{{- if and (not $creds.existingSecret) $inline }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -66,9 +67,9 @@ spec:
       {{- include "snapcd-agent.selectorLabels" (dict "ctx" $ "component" "sidecar-claude") | nindent 6 }}
   template:
     metadata:
-      {{- if or .Values.sidecar.podAnnotations (not $creds.existingSecret) }}
+      {{- if or .Values.sidecar.podAnnotations (and (not $creds.existingSecret) $inline) }}
       annotations:
-        {{- if not $creds.existingSecret }}
+        {{- if and (not $creds.existingSecret) $inline }}
         checksum/credentials: {{ toJson $creds | sha256sum }}
         {{- end }}
         {{- with .Values.sidecar.podAnnotations }}
@@ -107,6 +108,12 @@ spec:
               value: {{ .Values.sidecar.port | quote }}
             - name: SNAPCD_BASE_URL
               value: {{ $serverUrl | quote }}
+            {{- range $key, $path := dict "CLAUDE_CODE_OAUTH_TOKEN_FILE" $creds.files.oauthToken "ANTHROPIC_API_KEY_FILE" $creds.files.apiKey "GITHUB_TOKEN_FILE" $creds.files.githubToken }}
+            {{- if $path }}
+            - name: {{ $key }}
+              value: {{ $path | quote }}
+            {{- end }}
+            {{- end }}
             {{- range $key := list "CLAUDE_CODE_OAUTH_TOKEN" "ANTHROPIC_API_KEY" "GITHUB_TOKEN" }}
             - name: {{ $key }}
               valueFrom:
@@ -124,6 +131,9 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            {{- with .Values.sidecar.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- with .Values.sidecar.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -139,6 +149,9 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        {{- with .Values.sidecar.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

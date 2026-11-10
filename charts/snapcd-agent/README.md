@@ -1,6 +1,6 @@
 # snapcd-agent
 
-![AppVersion: 1.16.4](https://img.shields.io/badge/AppVersion-1.16.4-informational?style=flat-square)
+![AppVersion: 1.16.5](https://img.shields.io/badge/AppVersion-1.16.5-informational?style=flat-square)
 
 The Snap CD Agent, with its Claude sidecar for inference.
 
@@ -63,10 +63,15 @@ The defaults are the reference deployment's sample settings, the same as the Doc
 | serviceAccount.name | string | `""` | ServiceAccount name. Defaults to the full name when `create` is true, and to `default` otherwise. |
 | sidecar.credentials.apiKey | string | `""` | Anthropic API key (`sk-ant-api03-...`), as `ANTHROPIC_API_KEY`. Set this or `oauthToken`, not both. |
 | sidecar.credentials.existingSecret | string | `""` | Name of an existing Secret holding `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`, and optionally `GITHUB_TOKEN`. Every key is optional in it. |
+| sidecar.credentials.files.apiKey | string | `""` | File holding the Anthropic API key. |
+| sidecar.credentials.files.githubToken | string | `""` | File holding the GitHub token. |
+| sidecar.credentials.files.oauthToken | string | `""` | File holding the Claude subscription token. Set this or `files.apiKey`. |
 | sidecar.credentials.githubToken | string | `""` | GitHub token for the AutoFix path (clone and open a pull request), as `GITHUB_TOKEN`. Optional. |
 | sidecar.credentials.oauthToken | string | `""` | Claude subscription token (`sk-ant-oat01-...`), as `CLAUDE_CODE_OAUTH_TOKEN`. Set this or `apiKey`, not both. |
 | sidecar.enabled | bool | `true` | Deploy the Claude sidecar, the Agent's inference provider. It needs exactly one of `credentials.oauthToken`, `credentials.apiKey`, or an existing Secret holding one. |
 | sidecar.extraEnv | list | `[]` | Extra environment variables for the sidecar. |
+| sidecar.extraVolumeMounts | list | `[]` | Extra volume mounts for the sidecar container. |
+| sidecar.extraVolumes | list | `[]` | Extra volumes for the sidecar pod, such as a Secrets Store CSI volume holding the files named in `sidecar.credentials.files`. |
 | sidecar.image.digest | string | `""` | Sidecar image digest. |
 | sidecar.image.pullPolicy | string | `"IfNotPresent"` | Sidecar image pull policy. |
 | sidecar.image.registry | string | `"ghcr.io"` | Sidecar image registry. |

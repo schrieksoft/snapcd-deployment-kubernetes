@@ -1,0 +1,20 @@
+config:
+  appsettings:
+    Server:
+      Url: http://snapcd-server:5000
+sidecar:
+  credentials:
+    files:
+      oauthToken: /mnt/secrets-store/claude-code-oauth-token
+      githubToken: /mnt/secrets-store/github-token
+  extraVolumes:
+    - name: credentials
+      csi:
+        driver: secrets-store.csi.k8s.io
+        readOnly: true
+        volumeAttributes:
+          secretProviderClass: snapcd-agent-credentials
+  extraVolumeMounts:
+    - name: credentials
+      mountPath: /mnt/secrets-store
+      readOnly: true
