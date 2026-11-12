@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/name: snapcd-runner
     app.kubernetes.io/instance: snapcd-runner
     app.kubernetes.io/component: runner
-    app.kubernetes.io/version: "1.18.2"
+    app.kubernetes.io/version: "1.18.3"
     app.kubernetes.io/part-of: snapcd
 spec:
   clusterIP: None
@@ -31,7 +31,7 @@ metadata:
     app.kubernetes.io/name: snapcd-runner
     app.kubernetes.io/instance: snapcd-runner
     app.kubernetes.io/component: runner
-    app.kubernetes.io/version: "1.18.2"
+    app.kubernetes.io/version: "1.18.3"
     app.kubernetes.io/part-of: snapcd
 spec:
   serviceName: snapcd-runner
@@ -48,7 +48,7 @@ spec:
         app.kubernetes.io/name: snapcd-runner
         app.kubernetes.io/instance: snapcd-runner
         app.kubernetes.io/component: runner
-        app.kubernetes.io/version: "1.18.2"
+        app.kubernetes.io/version: "1.18.3"
         app.kubernetes.io/part-of: snapcd
     spec:
       serviceAccountName: default
@@ -63,7 +63,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: stage-ssh
-          image: ghcr.io/schrieksoft/snapcd/snapcd-runner-azure:1.18.2
+          image: ghcr.io/schrieksoft/snapcd/snapcd-runner-azure:1.18.3
           imagePullPolicy: IfNotPresent
           resources:
             limits:
@@ -104,7 +104,7 @@ spec:
               readOnly: true
       containers:
         - name: snapcd-runner
-          image: ghcr.io/schrieksoft/snapcd/snapcd-runner-azure:1.18.2
+          image: ghcr.io/schrieksoft/snapcd/snapcd-runner-azure:1.18.3
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
